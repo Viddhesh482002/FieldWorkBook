@@ -239,15 +239,20 @@ class FieldWorkBookApp {
                 return;
             }
 
+            // Normalize numeric values (handle nulls/strings)
+            const initialAmountNum = parseFloat(team.initial_amount ?? 0) || 0;
+            const usedAmountNum = parseFloat(team.used_amount ?? 0) || 0;
+            const remainingAmountNum = parseFloat(team.remaining_amount ?? (initialAmountNum - usedAmountNum)) || 0;
+
             // Update team information with animation
             document.getElementById('teamName').textContent = team.name;
             document.getElementById('teamLocation').textContent = team.location;
-            this.animateCounter('teamInitialAmount', '$' + parseFloat(team.initial_amount).toFixed(2));
-            this.animateCounter('teamUsedAmount', '$' + parseFloat(team.used_amount).toFixed(2));
-            this.animateCounter('teamRemainingAmount', '$' + parseFloat(team.remaining_amount).toFixed(2));
+            this.animateCounter('teamInitialAmount', '$' + initialAmountNum.toFixed(2));
+            this.animateCounter('teamUsedAmount', '$' + usedAmountNum.toFixed(2));
+            this.animateCounter('teamRemainingAmount', '$' + remainingAmountNum.toFixed(2));
 
             // Update progress bar
-            const usagePercentage = (team.used_amount / team.initial_amount) * 100;
+            const usagePercentage = initialAmountNum > 0 ? (usedAmountNum / initialAmountNum) * 100 : 0;
             const progressBar = document.getElementById('budgetProgressBar');
             if (progressBar) {
                 progressBar.style.width = usagePercentage + '%';
@@ -1108,8 +1113,10 @@ class FieldWorkBookApp {
         });
 
         // Modal triggers
-        document.getElementById('createTeamBtn').addEventListener('click', () => {
-            new bootstrap.Modal(document.getElementById('createTeamModal')).show();
+        document.querySelectorAll('.create-team-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                new bootstrap.Modal(document.getElementById('createTeamModal')).show();
+            });
         });
 
         document.getElementById('addExpenseBtn').addEventListener('click', () => {
