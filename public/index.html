@@ -1,0 +1,595 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FieldWorkBook - Team Expense Management</title>
+    
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Font Awesome -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <!-- Animate.css -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css" rel="stylesheet">
+    <!-- DataTables CSS -->
+    <link href="https://cdn.datatables.net/1.13.6/css/dataTables.bootstrap5.min.css" rel="stylesheet">
+    <!-- Custom CSS -->
+    <link href="css/style.css" rel="stylesheet">
+</head>
+<body>
+    <!-- Navigation -->
+    <nav class="navbar navbar-expand-lg navbar-dark bg-primary sticky-top" id="mainNav" style="display: none;">
+        <div class="container">
+            <a class="navbar-brand" href="#">
+                <i class="fas fa-clipboard-list"></i>
+                FieldWorkBook
+            </a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav me-auto">
+                    <li class="nav-item">
+                        <a class="nav-link" href="#" id="dashboardLink"><i class="fas fa-tachometer-alt me-1"></i>Dashboard</a>
+                    </li>
+                    <li class="nav-item admin-only" style="display: none;">
+                        <a class="nav-link" href="#" id="teamsLink"><i class="fas fa-users me-1"></i>Teams</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="#" id="expensesLink"><i class="fas fa-receipt me-1"></i>Expenses</a>
+                    </li>
+                    <li class="nav-item admin-only" style="display: none;">
+                        <a class="nav-link" href="#" id="requestsLink"><i class="fas fa-hand-holding-dollar me-1"></i>Requests</a>
+                    </li>
+                </ul>
+                <ul class="navbar-nav">
+                    <li class="nav-item dropdown">
+                        <a class="nav-link dropdown-toggle" href="#" id="userDropdown" role="button" data-bs-toggle="dropdown">
+                            <i class="fas fa-user-circle me-1"></i><span id="userDisplayName"></span>
+                        </a>
+                        <ul class="dropdown-menu">
+                            <li><a class="dropdown-item" href="#" id="logoutBtn"><i class="fas fa-sign-out-alt me-1"></i>Logout</a></li>
+                        </ul>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Login Page -->
+    <div id="loginPage" class="min-vh-100 d-flex align-items-center bg-gradient">
+        <div class="container">
+            <div class="row justify-content-center">
+                <div class="col-md-6 col-lg-4">
+                    <div class="card shadow-lg animate__animated animate__fadeInUp">
+                        <div class="card-body p-5">
+                            <div class="text-center mb-4">
+                                <i class="fas fa-clipboard-list fa-3x text-primary mb-3"></i>
+                                <h2 class="card-title">FieldWorkBook</h2>
+                                <p class="text-muted">Team Expense Management</p>
+                            </div>
+                            <form id="loginForm">
+                                <div class="mb-3">
+                                    <label for="username" class="form-label">Username</label>
+                                    <div class="input-group">
+                                        <span class="input-group-text"><i class="fas fa-user"></i></span>
+                                        <input type="text" class="form-control" id="username" required>
+                                    </div>
+                                </div>
+                                <div class="mb-3">
+                                    <label for="password" class="form-label">Password</label>
+                                    <div class="input-group">
+                                        <span class="input-group-text"><i class="fas fa-lock"></i></span>
+                                        <input type="password" class="form-control" id="password" required>
+                                    </div>
+                                </div>
+                                <button type="submit" class="btn btn-primary w-100 py-2">
+                                    <i class="fas fa-sign-in-alt me-1"></i>Login
+                                </button>
+                            </form>
+                            <div class="mt-4 text-center">
+                                <small class="text-muted">
+                                    Demo: admin/admin123 or create field staff accounts
+                                </small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Content -->
+    <div id="mainContent" style="display: none;">
+        <div class="container-fluid py-4">
+            
+            <!-- Dashboard Section -->
+            <div id="dashboardSection" class="content-section">
+                <!-- Admin Dashboard -->
+                <div id="adminDashboard" class="admin-only" style="display: none;">
+                    <div class="row mb-4">
+                        <div class="col">
+                            <h2 class="animate__animated animate__fadeInLeft"><i class="fas fa-tachometer-alt me-2"></i>Admin Dashboard</h2>
+                        </div>
+                    </div>
+                    
+                    <!-- Stats Cards -->
+                    <div class="row mb-4" id="statsCards">
+                        <div class="col-md-3 mb-3">
+                            <div class="stats-card primary hover-lift animate-fade-in" style="animation-delay: 0.1s;">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <div>
+                                        <h5 class="mb-1 text-secondary fw-semibold">Total Teams</h5>
+                                        <h2 class="mb-0 fw-bold" id="totalTeams">0</h2>
+                                        <small class="text-muted">Active teams</small>
+                                    </div>
+                                    <div class="avatar-circle">
+                                        <i class="fas fa-users fa-lg"></i>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-3 mb-3">
+                            <div class="stats-card success hover-lift animate-fade-in" style="animation-delay: 0.2s;">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <div>
+                                        <h5 class="mb-1 text-secondary fw-semibold">Total Budget</h5>
+                                        <h2 class="mb-0 fw-bold text-success" id="totalBudget">$0</h2>
+                                        <small class="text-muted">Allocated funds</small>
+                                    </div>
+                                    <div class="avatar-circle">
+                                        <i class="fas fa-dollar-sign fa-lg"></i>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-3 mb-3">
+                            <div class="stats-card warning hover-lift animate-fade-in" style="animation-delay: 0.3s;">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <div>
+                                        <h5 class="mb-1 text-secondary fw-semibold">Total Used</h5>
+                                        <h2 class="mb-0 fw-bold text-warning" id="totalUsed">$0</h2>
+                                        <small class="text-muted">Expenses made</small>
+                                    </div>
+                                    <div class="avatar-circle">
+                                        <i class="fas fa-chart-line fa-lg"></i>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-3 mb-3">
+                            <div class="stats-card info hover-lift animate-fade-in" style="animation-delay: 0.4s;">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <div>
+                                        <h5 class="mb-1 text-secondary fw-semibold">Pending Requests</h5>
+                                        <h2 class="mb-0 fw-bold text-info" id="pendingRequests">0</h2>
+                                        <small class="text-muted">Awaiting approval</small>
+                                    </div>
+                                    <div class="avatar-circle">
+                                        <i class="fas fa-clock fa-lg"></i>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Action Buttons -->
+                    <div class="row mb-4">
+                        <div class="col-12">
+                            <div class="d-flex gap-3">
+                                <button class="btn btn-primary hover-lift" id="createTeamBtn">
+                                    <i class="fas fa-plus me-2"></i>Create Team
+                                </button>
+                                <button class="btn btn-outline-secondary hover-lift" id="updateBudgetBtn">
+                                    <i class="fas fa-dollar-sign me-2"></i>Update Budget
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Team Overview -->
+                    <div class="row">
+                        <div class="col-12 mb-4">
+                            <div class="d-flex justify-content-between align-items-center mb-4">
+                                <div>
+                                    <h4 class="mb-1"><i class="fas fa-chart-bar me-2"></i>Teams Overview</h4>
+                                    <p class="text-secondary mb-0">Monitor budget usage across all teams</p>
+                                </div>
+                            </div>
+                            <div class="teams-overview-container">
+                                <div class="table-responsive">
+                                    <table class="table d-none" id="teamsOverviewTable">
+                                        <thead>
+                                            <tr>
+                                                <th>Team</th>
+                                                <th>Location</th>
+                                                <th>Initial Amount</th>
+                                                <th>Used Amount</th>
+                                                <th>Remaining</th>
+                                                <th>Members</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody></tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Recent Activity -->
+                    <div class="row">
+                        <div class="col-lg-4 mb-4">
+                            <div class="card animate__animated animate__fadeInUp" style="animation-delay: 0.6s;">
+                                <div class="card-header">
+                                    <h5><i class="fas fa-bell me-2"></i>Recent Expenses</h5>
+                                </div>
+                                <div class="card-body">
+                                    <div id="recentExpenses"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Field Staff Dashboard -->
+                <div id="fieldStaffDashboard" class="field-staff-only" style="display: none;">
+                    <div class="row mb-4">
+                        <div class="col">
+                            <h2 class="animate__animated animate__fadeInLeft"><i class="fas fa-tachometer-alt me-2"></i>My Dashboard</h2>
+                        </div>
+                    </div>
+                    
+                    <!-- Team Info Card -->
+                    <div class="row mb-4">
+                        <div class="col-lg-6 mb-3">
+                            <div class="card animate__animated animate__fadeInUp">
+                                <div class="card-header bg-primary text-white">
+                                    <h5><i class="fas fa-users me-2"></i>Team Information</h5>
+                                </div>
+                                <div class="card-body">
+                                    <div id="teamInfo">
+                                        <p><strong>Team:</strong> <span id="teamName">-</span></p>
+                                        <p><strong>Location:</strong> <span id="teamLocation">-</span></p>
+                                        <div class="row text-center mt-3">
+                                            <div class="col-4">
+                                                <h4 class="text-success" id="teamInitialAmount">$0</h4>
+                                                <small class="text-muted">Initial Amount</small>
+                                            </div>
+                                            <div class="col-4">
+                                                <h4 class="text-warning" id="teamUsedAmount">$0</h4>
+                                                <small class="text-muted">Used Amount</small>
+                                            </div>
+                                            <div class="col-4">
+                                                <h4 class="text-info" id="teamRemainingAmount">$0</h4>
+                                                <small class="text-muted">Remaining</small>
+                                            </div>
+                                        </div>
+                                        <div class="mt-3">
+                                            <div class="d-flex justify-content-between mb-1">
+                                                <small class="text-muted">Budget Usage</small>
+                                                <small class="text-muted"><span id="usagePercentage">0</span>%</small>
+                                            </div>
+                                            <div class="progress">
+                                                <div class="progress-bar" id="budgetProgressBar" role="progressbar" style="width: 0%" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100"></div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-lg-6 mb-3">
+                            <div class="card animate__animated animate__fadeInUp" style="animation-delay: 0.1s;">
+                                <div class="card-header bg-success text-white">
+                                    <h5><i class="fas fa-plus me-2"></i>Quick Actions</h5>
+                                </div>
+                                <div class="card-body">
+                                    <button class="btn btn-primary w-100 mb-2" id="addExpenseBtn">
+                                        <i class="fas fa-receipt me-1"></i>Add New Expense
+                                    </button>
+                                    <button class="btn btn-warning w-100" id="requestAmountBtn">
+                                        <i class="fas fa-hand-holding-dollar me-1"></i>Request Additional Amount
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- My Recent Expenses -->
+                    <div class="row">
+                        <div class="col-12">
+                            <div class="card animate__animated animate__fadeInUp" style="animation-delay: 0.2s;">
+                                <div class="card-header">
+                                    <h5><i class="fas fa-history me-2"></i>My Recent Expenses</h5>
+                                </div>
+                                <div class="card-body">
+                                    <div class="table-responsive">
+                                        <table class="table table-hover" id="myExpensesTable">
+                                            <thead>
+                                                <tr>
+                                                    <th>Date</th>
+                                                    <th>Description</th>
+                                                    <th>Amount</th>
+                                                    <th>Attachment</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody></tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Teams Section (Admin Only) -->
+            <div id="teamsSection" class="content-section admin-only" style="display: none;">
+                <div class="row mb-4">
+                    <div class="col">
+                        <h2 class="animate__animated animate__fadeInLeft"><i class="fas fa-users me-2"></i>Teams Management</h2>
+                    </div>
+                    <div class="col-auto">
+                        <button class="btn btn-primary" id="createTeamBtn">
+                            <i class="fas fa-plus me-1"></i>Create Team
+                        </button>
+                    </div>
+                </div>
+                
+                <div class="card animate__animated animate__fadeInUp">
+                    <div class="card-body">
+                        <div class="table-responsive">
+                            <table class="table table-hover" id="teamsTable">
+                                <thead>
+                                    <tr>
+                                        <th>Team Name</th>
+                                        <th>Location</th>
+                                        <th>Initial Amount</th>
+                                        <th>Used Amount</th>
+                                        <th>Remaining Amount</th>
+                                        <th>Members</th>
+                                        <th>Created</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Expenses Section -->
+            <div id="expensesSection" class="content-section" style="display: none;">
+                <div class="row mb-4">
+                    <div class="col">
+                        <h2 class="animate__animated animate__fadeInLeft"><i class="fas fa-receipt me-2"></i>Expenses</h2>
+                    </div>
+                    <div class="col-auto field-staff-only" style="display: none;">
+                        <button class="btn btn-primary" id="addExpenseBtn2">
+                            <i class="fas fa-plus me-1"></i>Add Expense
+                        </button>
+                    </div>
+                </div>
+                
+                <div class="card animate__animated animate__fadeInUp">
+                    <div class="card-body">
+                        <div class="table-responsive">
+                            <table class="table table-hover" id="expensesTable">
+                                <thead>
+                                    <tr>
+                                        <th>Date</th>
+                                        <th>Team</th>
+                                        <th>User</th>
+                                        <th>Description</th>
+                                        <th>Amount</th>
+                                        <th>Attachment</th>
+                                    </tr>
+                                </thead>
+                                <tbody></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Requests Section (Admin Only) -->
+            <div id="requestsSection" class="content-section admin-only" style="display: none;">
+                <div class="row mb-4">
+                    <div class="col">
+                        <h2 class="animate__animated animate__fadeInLeft"><i class="fas fa-hand-holding-dollar me-2"></i>Amount Requests</h2>
+                    </div>
+                </div>
+                
+                <div class="card animate__animated animate__fadeInUp">
+                    <div class="card-body">
+                        <div class="table-responsive">
+                            <table class="table table-hover" id="requestsTable">
+                                <thead>
+                                    <tr>
+                                        <th>Date</th>
+                                        <th>Team</th>
+                                        <th>User</th>
+                                        <th>Requested Amount</th>
+                                        <th>Reason</th>
+                                        <th>Status</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modals -->
+
+    <!-- Create Team Modal -->
+    <div class="modal fade" id="createTeamModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title"><i class="fas fa-users me-2"></i>Create New Team</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <form id="createTeamForm">
+                    <div class="modal-body">
+                        <div class="mb-3">
+                            <label for="createTeamName" class="form-label">Team Name</label>
+                            <input type="text" class="form-control" id="createTeamName" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="createTeamLocation" class="form-label">Location/City</label>
+                            <input type="text" class="form-control" id="createTeamLocation" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="initialAmount" class="form-label">Initial Amount ($)</label>
+                            <input type="number" class="form-control" id="initialAmount" min="0" step="0.01" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="createTeamDescription" class="form-label">Description (Optional)</label>
+                            <textarea class="form-control" id="createTeamDescription" rows="2" placeholder="Brief description of the team..."></textarea>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                        <button type="submit" class="btn btn-primary">Create Team</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Add User Modal -->
+    <div class="modal fade" id="addUserModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title"><i class="fas fa-user-plus me-2"></i>Add Team Member</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <form id="addUserForm">
+                    <div class="modal-body">
+                        <input type="hidden" id="userTeamId">
+                        <div class="mb-3">
+                            <label for="userFullName" class="form-label">Full Name</label>
+                            <input type="text" class="form-control" id="userFullName" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="userUsername" class="form-label">Username</label>
+                            <input type="text" class="form-control" id="userUsername" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="userPassword" class="form-label">Password</label>
+                            <input type="password" class="form-control" id="userPassword" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="userEmail" class="form-label">Email (Optional)</label>
+                            <input type="email" class="form-control" id="userEmail" placeholder="user@example.com">
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                        <button type="submit" class="btn btn-primary">Add Member</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Add Expense Modal -->
+    <div class="modal fade" id="addExpenseModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title"><i class="fas fa-receipt me-2"></i>Add New Expense</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <form id="addExpenseForm" enctype="multipart/form-data">
+                    <div class="modal-body">
+                        <div class="mb-3">
+                            <label for="expenseDescription" class="form-label">Description</label>
+                            <input type="text" class="form-control" id="expenseDescription" placeholder="e.g., Dinner at ABC Restaurant" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="expenseAmount" class="form-label">Amount ($)</label>
+                            <input type="number" class="form-control" id="expenseAmount" min="0" step="0.01" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="expenseCategory" class="form-label">Category</label>
+                            <select class="form-control" id="expenseCategory">
+                                <option value="general">General</option>
+                                <option value="food">Food & Dining</option>
+                                <option value="transport">Transportation</option>
+                                <option value="accommodation">Accommodation</option>
+                                <option value="supplies">Supplies</option>
+                                <option value="other">Other</option>
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <label for="expenseAttachment" class="form-label">Attachment (Optional)</label>
+                            <input type="file" class="form-control" id="expenseAttachment" accept="image/*,.pdf">
+                            <div class="form-text">Upload receipt or bill (JPG, PNG, GIF, PDF - Max 5MB)</div>
+                            <div id="filePreview"></div>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                        <button type="submit" class="btn btn-primary">Add Expense</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Request Amount Modal -->
+    <div class="modal fade" id="requestAmountModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title"><i class="fas fa-hand-holding-dollar me-2"></i>Request Additional Amount</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <form id="requestAmountForm">
+                    <div class="modal-body">
+                        <div class="mb-3">
+                            <label for="requestedAmount" class="form-label">Requested Amount ($)</label>
+                            <input type="number" class="form-control" id="requestedAmount" min="0" step="0.01" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="requestReason" class="form-label">Reason</label>
+                            <textarea class="form-control" id="requestReason" rows="3" placeholder="Explain why additional amount is needed..." required></textarea>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                        <button type="submit" class="btn btn-primary">Submit Request</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Loading Spinner -->
+    <div id="loadingSpinner" class="d-none">
+        <div class="spinner-border text-primary" role="status">
+            <span class="visually-hidden">Loading...</span>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <!-- jQuery -->
+    <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+    <!-- Bootstrap JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <!-- DataTables -->
+    <script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
+    <script src="https://cdn.datatables.net/1.13.6/js/dataTables.bootstrap5.min.js"></script>
+    <!-- SweetAlert2 -->
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <!-- Custom JS -->
+    <script src="js/app.js"></script>
+</body>
+</html>
