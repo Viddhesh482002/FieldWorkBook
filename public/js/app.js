@@ -9,9 +9,122 @@ class FieldWorkBookApp {
 
     init() {
         console.log('🚀 FieldWorkBook initializing...');
+        this.initializeModernEffects();
         this.checkAuthStatus();
         this.bindEvents();
         this.initializeDataTables();
+    }
+
+    // Modern UI Effects
+    initializeModernEffects() {
+        // Add subtle parallax effect to background elements
+        this.initParallaxEffect();
+        
+        // Initialize smooth scroll and interaction observers
+        this.initIntersectionObserver();
+        
+        // Add mouse tracking for 3D tilt effects
+        this.initMouseTracking();
+        
+        // Initialize particle system for login page
+        if (document.getElementById('loginPage')) {
+            this.initParticleSystem();
+        }
+    }
+
+    initParallaxEffect() {
+        const spheres = document.querySelectorAll('.bg-sphere');
+        const cubes = document.querySelectorAll('.bg-cube');
+        
+        window.addEventListener('scroll', () => {
+            const scrolled = window.pageYOffset;
+            const rate = scrolled * -0.5;
+            
+            spheres.forEach((sphere, index) => {
+                const speed = (index + 1) * 0.3;
+                sphere.style.transform = `translate3d(0, ${rate * speed}px, 0)`;
+            });
+            
+            cubes.forEach((cube, index) => {
+                const speed = (index + 1) * 0.2;
+                cube.style.transform = `translate3d(0, ${rate * speed}px, 0) rotateX(${scrolled * 0.1}deg) rotateY(${scrolled * 0.05}deg)`;
+            });
+        });
+    }
+
+    initIntersectionObserver() {
+        const observerOptions = {
+            threshold: 0.1,
+            rootMargin: '0px 0px -50px 0px'
+        };
+
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    entry.target.classList.add('animate-fade-in');
+                    entry.target.style.animationDelay = Math.random() * 0.3 + 's';
+                }
+            });
+        }, observerOptions);
+
+        // Observe all cards and stats elements
+        document.querySelectorAll('.card, .stats-card, .btn').forEach(el => {
+            observer.observe(el);
+        });
+    }
+
+    initMouseTracking() {
+        const cards = document.querySelectorAll('.card, .stats-card, .login-card');
+        
+        cards.forEach(card => {
+            card.addEventListener('mousemove', (e) => {
+                const rect = card.getBoundingClientRect();
+                const x = e.clientX - rect.left;
+                const y = e.clientY - rect.top;
+                const centerX = rect.width / 2;
+                const centerY = rect.height / 2;
+                const rotateX = (y - centerY) / 10;
+                const rotateY = (centerX - x) / 10;
+                
+                card.style.transform = `perspective(1000px) rotateX(${rotateX}deg) rotateY(${rotateY}deg) translateZ(10px)`;
+            });
+            
+            card.addEventListener('mouseleave', () => {
+                card.style.transform = 'perspective(1000px) rotateX(0deg) rotateY(0deg) translateZ(0px)';
+            });
+        });
+    }
+
+    initParticleSystem() {
+        const particleContainer = document.createElement('div');
+        particleContainer.className = 'particle-system';
+        particleContainer.style.cssText = `
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 1;
+        `;
+        document.getElementById('loginPage').appendChild(particleContainer);
+        
+        // Create floating particles
+        for (let i = 0; i < 20; i++) {
+            const particle = document.createElement('div');
+            particle.style.cssText = `
+                position: absolute;
+                width: 4px;
+                height: 4px;
+                background: rgba(0, 212, 255, 0.6);
+                border-radius: 50%;
+                animation: float${i % 3} ${5 + Math.random() * 10}s ease-in-out infinite;
+                left: ${Math.random() * 100}%;
+                top: ${Math.random() * 100}%;
+                box-shadow: 0 0 10px rgba(0, 212, 255, 0.8);
+            `;
+            particleContainer.appendChild(particle);
+        }
     }
 
     // Authentication Methods
@@ -90,6 +203,15 @@ class FieldWorkBookApp {
             loginPage.style.visibility = 'visible';
             loginPage.style.opacity = '1';
             loginPage.classList.add('animate__animated', 'animate__fadeIn');
+            
+            // Add staggered animation to form elements
+            setTimeout(() => {
+                const formElements = loginPage.querySelectorAll('.form-control, .btn, .card-title');
+                formElements.forEach((el, index) => {
+                    el.style.animationDelay = (index * 0.1) + 's';
+                    el.classList.add('animate__animated', 'animate__slideInUp');
+                });
+            }, 300);
         }
         
         if (mainContent) {
@@ -107,26 +229,34 @@ class FieldWorkBookApp {
     showMainApp() {
         console.log('🔄 Switching to main app view...');
         
-        // Completely hide login page
+        // Completely hide login page with animation
         const loginPage = document.getElementById('loginPage');
         const mainContent = document.getElementById('mainContent');
         const mainNav = document.getElementById('mainNav');
         
         if (loginPage) {
-            loginPage.style.display = 'none';
-            loginPage.style.visibility = 'hidden';
-            loginPage.style.opacity = '0';
+            loginPage.classList.add('animate__animated', 'animate__fadeOut');
+            setTimeout(() => {
+                loginPage.style.display = 'none';
+                loginPage.style.visibility = 'hidden';
+                loginPage.style.opacity = '0';
+                // Remove particle system
+                const particleSystem = loginPage.querySelector('.particle-system');
+                if (particleSystem) particleSystem.remove();
+            }, 500);
         }
         
         if (mainContent) {
             mainContent.style.display = 'block';
             mainContent.style.visibility = 'visible';
             mainContent.style.opacity = '1';
+            mainContent.classList.add('animate__animated', 'animate__fadeIn');
         }
         
         if (mainNav) {
             mainNav.style.display = 'block';
             mainNav.style.visibility = 'visible';
+            mainNav.classList.add('animate__animated', 'animate__slideInDown');
         }
         
         // Update user display
@@ -155,26 +285,46 @@ class FieldWorkBookApp {
     }
 
     showSection(section) {
-        // Hide all sections
+        // Hide all sections with fade out
         document.querySelectorAll('.content-section').forEach(el => {
-            el.style.display = 'none';
+            if (el.style.display !== 'none') {
+                el.classList.add('animate__animated', 'animate__fadeOutLeft');
+                setTimeout(() => {
+                    el.style.display = 'none';
+                    el.classList.remove('animate__fadeOutLeft');
+                }, 300);
+            }
         });
         
-        // Show selected section
-        const sectionElement = document.getElementById(section + 'Section');
-        if (sectionElement) {
-            sectionElement.style.display = 'block';
-            sectionElement.classList.add('animate__animated', 'animate__fadeIn');
-        }
+        // Show selected section with delay and animation
+        setTimeout(() => {
+            const sectionElement = document.getElementById(section + 'Section');
+            if (sectionElement) {
+                sectionElement.style.display = 'block';
+                sectionElement.classList.add('animate__animated', 'animate__fadeInRight');
+                
+                // Add staggered animation to child elements
+                const childElements = sectionElement.querySelectorAll('.card, .stats-card, .btn');
+                childElements.forEach((el, index) => {
+                    el.style.animationDelay = (index * 0.1) + 's';
+                    el.classList.add('animate-fade-in');
+                });
+            }
+        }, 300);
+        
         this.currentSection = section;
         
-        // Update navigation
+        // Update navigation with smooth transition
         document.querySelectorAll('.nav-link').forEach(link => {
             link.classList.remove('active');
         });
         
         const activeLink = document.getElementById(section + 'Link');
-        if (activeLink) activeLink.classList.add('active');
+        if (activeLink) {
+            activeLink.classList.add('active');
+            // Add ripple effect
+            this.createRippleEffect(activeLink);
+        }
         
         // Load section data
         this.loadSectionData(section);
@@ -679,9 +829,10 @@ class FieldWorkBookApp {
                 </td>
             `;
             
-            // Add staggered animation
+            // Add staggered animation and modern effects
             row.style.animationDelay = (index * 0.1) + 's';
             row.classList.add('animate-fade-in', 'hover-lift');
+            this.addFloatingAnimation(row);
         });
 
         $('#teamsTable').DataTable({
@@ -1131,21 +1282,35 @@ class FieldWorkBookApp {
             new bootstrap.Modal(document.getElementById('requestAmountModal')).show();
         });
 
-        // File input preview
+        // File input preview with animation
         document.getElementById('expenseAttachment').addEventListener('change', (e) => {
             const file = e.target.files[0];
             const preview = document.getElementById('filePreview');
             
             if (file) {
-                preview.innerHTML = `
-                    <div class="alert alert-info mt-2">
-                        <i class="fas fa-file me-2"></i>
-                        <strong>${file.name}</strong> (${(file.size / 1024 / 1024).toFixed(2)} MB)
+                const previewElement = document.createElement('div');
+                previewElement.className = 'alert alert-info mt-2 animate__animated animate__fadeInUp';
+                previewElement.innerHTML = `
+                    <i class="fas fa-file me-2"></i>
+                    <strong>${file.name}</strong> (${(file.size / 1024 / 1024).toFixed(2)} MB)
+                    <div class="progress mt-2" style="height: 4px;">
+                        <div class="progress-bar" style="width: 100%;"></div>
                     </div>
                 `;
+                preview.innerHTML = '';
+                preview.appendChild(previewElement);
+                this.addGlowEffect(previewElement, 'rgba(0, 255, 136, 0.3)');
             } else {
                 preview.innerHTML = '';
             }
+        });
+        
+        // Add modern button interactions
+        document.querySelectorAll('.btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                this.createRippleEffect(btn);
+                this.addGlowEffect(btn);
+            });
         });
     }
 
@@ -1205,23 +1370,79 @@ class FieldWorkBookApp {
         const element = document.getElementById(elementId);
         if (!element) return;
         
+        // Add glowing effect during animation
+        element.style.textShadow = '0 0 20px rgba(0, 212, 255, 0.8)';
+        
         if (typeof finalValue === 'string' && finalValue.startsWith('$')) {
             const numValue = parseFloat(finalValue.replace('$', ''));
             let current = 0;
-            const increment = numValue / 50;
+            const increment = numValue / 60;
             const timer = setInterval(() => {
                 current += increment;
                 if (current >= numValue) {
                     element.textContent = finalValue;
                     clearInterval(timer);
+                    // Remove glow and add pulse
+                    element.style.textShadow = '';
+                    element.classList.add('animate__animated', 'animate__pulse');
                 } else {
                     element.textContent = '$' + current.toFixed(2);
                 }
-            }, 20);
+            }, 16);
         } else {
             element.textContent = finalValue;
-            element.classList.add('animate__animated', 'animate__pulse');
+            element.style.textShadow = '';
+            element.classList.add('animate__animated', 'animate__bounceIn');
         }
+    }
+
+    // Modern UI Helper Methods
+    createRippleEffect(element) {
+        const ripple = document.createElement('span');
+        ripple.style.cssText = `
+            position: absolute;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.3);
+            transform: scale(0);
+            animation: ripple 0.6s linear;
+            pointer-events: none;
+            left: 50%;
+            top: 50%;
+            width: 100px;
+            height: 100px;
+            margin-left: -50px;
+            margin-top: -50px;
+        `;
+        
+        const style = document.createElement('style');
+        style.textContent = `
+            @keyframes ripple {
+                to {
+                    transform: scale(2);
+                    opacity: 0;
+                }
+            }
+        `;
+        document.head.appendChild(style);
+        
+        element.appendChild(ripple);
+        setTimeout(() => {
+            ripple.remove();
+            style.remove();
+        }, 600);
+    }
+
+    addFloatingAnimation(element) {
+        const randomDelay = Math.random() * 2;
+        const randomDuration = 3 + Math.random() * 2;
+        element.style.animation = `float3d ${randomDuration}s ease-in-out ${randomDelay}s infinite`;
+    }
+
+    addGlowEffect(element, color = 'rgba(0, 212, 255, 0.5)') {
+        element.style.boxShadow = `0 0 20px ${color}, 0 0 40px ${color}`;
+        setTimeout(() => {
+            element.style.boxShadow = '';
+        }, 2000);
     }
 }
 
