@@ -93,7 +93,7 @@ body {
     border-radius: 50%;
     background: linear-gradient(45deg, var(--neon-cyan), var(--neon-purple));
     opacity: 0.1;
-    animation: float3d 20s ease-in-out infinite;
+    animation: none;
 }
 
 .bg-sphere-1 {
@@ -125,7 +125,7 @@ body {
     background: linear-gradient(45deg, var(--neon-pink), var(--neon-green));
     opacity: 0.08;
     transform-style: preserve-3d;
-    animation: rotate3d 25s linear infinite;
+    animation: none;
 }
 
 .bg-cube-1 {
@@ -283,7 +283,7 @@ body::before {
 
 .nav-link:hover, .nav-link.active {
     color: var(--text-primary) !important;
-    transform: translateY(-2px);
+    transform: none;
     box-shadow: var(--shadow-3d);
 }
 
@@ -332,8 +332,8 @@ body::before {
 }
 
 .login-card:hover {
-    transform: translateY(-10px) perspective(1000px) rotateX(2deg);
-    box-shadow: var(--shadow-3d-hover);
+    transform: none;
+    box-shadow: var(--shadow-3d);
 }
 
 .login-logo-container {
@@ -354,12 +354,12 @@ body::before {
     color: white;
     box-shadow: var(--shadow-3d);
     transform-style: preserve-3d;
-    animation: neonPulse 3s ease-in-out infinite;
+    animation: none;
     transition: var(--transition-normal);
 }
 
 .logo-3d:hover {
-    transform: rotateY(15deg) rotateX(10deg);
+    transform: none;
 }
 
 .gradient-text {
@@ -508,8 +508,8 @@ body::before {
 }
 
 .card:hover {
-    transform: perspective(1000px) rotateX(2deg) translateY(-8px);
-    box-shadow: var(--shadow-3d-hover);
+    transform: none;
+    box-shadow: var(--shadow-3d);
     background: var(--bg-card-hover);
     border-color: var(--neon-cyan);
 }
@@ -581,8 +581,8 @@ body::before {
 }
 
 .btn:hover {
-    transform: perspective(100px) rotateX(-2deg) translateY(-3px);
-    box-shadow: var(--shadow-3d-hover);
+    transform: none;
+    box-shadow: var(--shadow-3d);
 }
 
 .btn-primary {
@@ -658,8 +658,8 @@ body::before {
 }
 
 .stats-card:hover {
-    transform: perspective(1000px) rotateX(3deg) translateY(-8px);
-    box-shadow: var(--shadow-3d-hover);
+    transform: none;
+    box-shadow: var(--shadow-3d);
     background: var(--bg-card-hover);
     border-color: var(--neon-cyan);
 }
@@ -715,7 +715,7 @@ body::before {
 
 .table tbody tr:hover {
     background: var(--bg-card-hover);
-    transform: scale(1.02);
+    transform: none;
     box-shadow: var(--shadow-3d);
 }
 
@@ -897,8 +897,8 @@ body::before {
 }
 
 .hover-lift:hover {
-    transform: translateY(-5px) perspective(100px) rotateX(2deg);
-    box-shadow: var(--shadow-3d-hover);
+    transform: none;
+    box-shadow: var(--shadow-3d);
 }
 
 .hover-scale {
@@ -941,8 +941,8 @@ body::before {
 }
 
 .avatar-circle:hover {
-    transform: scale(1.1) rotateY(15deg);
-    box-shadow: var(--shadow-3d-hover);
+    transform: none;
+    box-shadow: var(--shadow-3d);
 }
 
 /* Team Overview Cards */
@@ -957,8 +957,8 @@ body::before {
 
 .team-overview-card:hover {
     border-color: var(--neon-cyan);
-    box-shadow: 0 8px 25px rgba(0, 212, 255, 0.15), var(--shadow-3d-hover);
-    transform: perspective(1000px) rotateX(2deg) translateY(-5px);
+    box-shadow: 0 8px 25px rgba(0, 212, 255, 0.15), var(--shadow-3d);
+    transform: none;
 }
 
 .usage-badge .badge {
@@ -1000,7 +1000,7 @@ body::before {
 }
 
 .action-buttons .btn:hover {
-    transform: perspective(100px) rotateX(-5deg) scale(1.1);
+    transform: none;
 }
 
 /* Enhanced Typography */
@@ -1065,8 +1065,8 @@ h2 {
 }
 
 .title-icon:hover {
-    transform: rotateY(15deg) rotateX(5deg) scale(1.1);
-    box-shadow: var(--shadow-3d-hover);
+    transform: none;
+    box-shadow: var(--shadow-3d);
 }
 
 .section-title span {

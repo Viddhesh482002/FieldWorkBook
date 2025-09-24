@@ -9,7 +9,8 @@ class FieldWorkBookApp {
 
     init() {
         console.log('🚀 FieldWorkBook initializing...');
-        this.initializeModernEffects();
+        // Disable wobble-causing effects (parallax, tilt, particles)
+        // this.initializeModernEffects();
         this.checkAuthStatus();
         this.bindEvents();
         this.initializeDataTables();
@@ -185,6 +186,12 @@ class FieldWorkBookApp {
             this.currentUser = null;
             this.showLoginPage();
             this.showToast('Logged out successfully', 'success');
+            // Hard redirect to reset state and ensure login view
+            setTimeout(() => {
+                if (window && window.location) {
+                    window.location.replace('/');
+                }
+            }, 300);
         } catch (error) {
             console.error('Logout error:', error);
         }
@@ -237,9 +244,9 @@ class FieldWorkBookApp {
         if (loginPage) {
             loginPage.classList.add('animate__animated', 'animate__fadeOut');
             setTimeout(() => {
-                loginPage.style.display = 'none';
-                loginPage.style.visibility = 'hidden';
-                loginPage.style.opacity = '0';
+            loginPage.style.display = 'none';
+            loginPage.style.visibility = 'hidden';
+            loginPage.style.opacity = '0';
                 // Remove particle system
                 const particleSystem = loginPage.querySelector('.particle-system');
                 if (particleSystem) particleSystem.remove();
@@ -290,7 +297,7 @@ class FieldWorkBookApp {
             if (el.style.display !== 'none') {
                 el.classList.add('animate__animated', 'animate__fadeOutLeft');
                 setTimeout(() => {
-                    el.style.display = 'none';
+            el.style.display = 'none';
                     el.classList.remove('animate__fadeOutLeft');
                 }, 300);
             }
@@ -298,9 +305,9 @@ class FieldWorkBookApp {
         
         // Show selected section with delay and animation
         setTimeout(() => {
-            const sectionElement = document.getElementById(section + 'Section');
-            if (sectionElement) {
-                sectionElement.style.display = 'block';
+        const sectionElement = document.getElementById(section + 'Section');
+        if (sectionElement) {
+            sectionElement.style.display = 'block';
                 sectionElement.classList.add('animate__animated', 'animate__fadeInRight');
                 
                 // Add staggered animation to child elements
@@ -829,10 +836,9 @@ class FieldWorkBookApp {
                 </td>
             `;
             
-            // Add staggered animation and modern effects
-            row.style.animationDelay = (index * 0.1) + 's';
-            row.classList.add('animate-fade-in', 'hover-lift');
-            this.addFloatingAnimation(row);
+            // Keep rows static to avoid wobble
+            row.classList.remove('hover-lift');
+            row.classList.add('animate-fade-in');
         });
 
         $('#teamsTable').DataTable({
@@ -1266,7 +1272,7 @@ class FieldWorkBookApp {
         // Modal triggers
         document.querySelectorAll('.create-team-btn').forEach(btn => {
             btn.addEventListener('click', () => {
-                new bootstrap.Modal(document.getElementById('createTeamModal')).show();
+            new bootstrap.Modal(document.getElementById('createTeamModal')).show();
             });
         });
 
@@ -1291,8 +1297,8 @@ class FieldWorkBookApp {
                 const previewElement = document.createElement('div');
                 previewElement.className = 'alert alert-info mt-2 animate__animated animate__fadeInUp';
                 previewElement.innerHTML = `
-                    <i class="fas fa-file me-2"></i>
-                    <strong>${file.name}</strong> (${(file.size / 1024 / 1024).toFixed(2)} MB)
+                        <i class="fas fa-file me-2"></i>
+                        <strong>${file.name}</strong> (${(file.size / 1024 / 1024).toFixed(2)} MB)
                     <div class="progress mt-2" style="height: 4px;">
                         <div class="progress-bar" style="width: 100%;"></div>
                     </div>
