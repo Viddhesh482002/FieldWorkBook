@@ -381,11 +381,21 @@ function showAddUserModal(teamId) {
 }
 
 function approveRequest(requestId) {
-    showToast('Approve request feature will be implemented soon', 'info');
+    // This function is implemented in app.js through the app instance
+    if (typeof app !== 'undefined' && app.approveRequest) {
+        app.approveRequest(requestId);
+    } else {
+        showToast('Approve request feature will be implemented soon', 'info');
+    }
 }
 
 function rejectRequest(requestId) {
-    showToast('Reject request feature will be implemented soon', 'info');
+    // This function is implemented in app.js through the app instance
+    if (typeof app !== 'undefined' && app.rejectRequest) {
+        app.rejectRequest(requestId);
+    } else {
+        showToast('Reject request feature will be implemented soon', 'info');
+    }
 }
 
 console.log('Working app loaded successfully');

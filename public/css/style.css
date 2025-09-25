@@ -407,8 +407,8 @@ body::before {
     border-color: var(--neon-cyan);
     box-shadow: 0 0 0 0.2rem rgba(0, 212, 255, 0.25), 0 0 20px rgba(0, 212, 255, 0.2);
     transform: translateY(-2px);
-    background: rgba(255, 255, 255, 0.08);
     color: var(--text-primary);
+    background-color: #000000;
 }
 
 .input-group-text {
@@ -482,6 +482,7 @@ body::before {
     overflow: hidden;
     position: relative;
     transform: perspective(1000px) rotateX(0deg);
+    color: whitesmoke;
 }
 
 .card::before {
@@ -693,6 +694,7 @@ body::before {
     margin: 0;
     color: var(--text-primary);
     background: transparent;
+    
 }
 
 .table thead th {
@@ -711,6 +713,7 @@ body::before {
     transition: var(--transition-fast);
     background: var(--bg-card);
     border-bottom: 1px solid var(--glass-border);
+   
 }
 
 .table tbody tr:hover {
@@ -725,6 +728,7 @@ body::before {
     border: none;
     font-weight: 500;
     color: var(--text-primary);
+    background-color: #000000;
 }
 
 /* Enhanced Badges */

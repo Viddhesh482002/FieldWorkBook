@@ -195,7 +195,7 @@ app.post('/api/teams', requireAdmin, async (req, res) => {
 
     const { data, error } = await supabase
         .from('teams')
-        .insert([{ name, location, initial_amount: initial_amt, remaining_amount, description: description || '' }])
+        .insert([{ name, location, initial_amount: initial_amt, remaining_amount, description: description || '', created_at: new Date().toISOString() }])
         .select('id')
         .single();
     if (error) {
@@ -301,7 +301,7 @@ app.post('/api/users', requireAdmin, async (req, res) => {
     const hashedPassword = bcrypt.hashSync(password, 10);
     const { data, error } = await supabase
         .from('users')
-        .insert([{ username, password: hashedPassword, role: 'field_staff', full_name, email: email || '', team_id }])
+        .insert([{ username, password: hashedPassword, role: 'field_staff', full_name, email: email || '', team_id, created_at: new Date().toISOString() }])
         .select('id')
         .single();
     if (error) {
@@ -428,7 +428,7 @@ app.post('/api/expenses', requireAuth, upload.single('attachment'), async (req, 
         // Add expense
     const { data: newExpense, error: insertErr } = await supabase
         .from('expenses')
-        .insert([{ team_id: teamId, user_id: userId, description, amount, category: category || 'general', attachment_path: attachmentPath, attachment_name: attachmentName }])
+        .insert([{ team_id: teamId, user_id: userId, description, amount, category: category || 'general', attachment_path: attachmentPath, attachment_name: attachmentName, created_at: new Date().toISOString() }])
         .select('id')
         .single();
     if (insertErr) {
@@ -513,7 +513,7 @@ app.post('/api/amount-requests', requireAuth, async (req, res) => {
 
     const { data, error } = await supabase
         .from('amount_requests')
-        .insert([{ team_id: teamId, user_id: userId, requested_amount, reason }])
+        .insert([{ team_id: teamId, user_id: userId, requested_amount, reason, status: 'pending', created_at: new Date().toISOString() }])
         .select('id')
         .single();
     if (error) {
@@ -536,8 +536,8 @@ app.put('/api/amount-requests/:id/approve', requireAdmin, async (req, res) => {
 		console.error('Database error:', getReqErr);
             return res.status(500).json({ error: 'Database error' });
         }
-        if (!request || request.status !== 'pending') {
-            return res.status(400).json({ error: 'Invalid request' });
+        if (!request || (request.status !== 'pending' && request.status !== null)) {
+            return res.status(400).json({ error: 'Invalid request or request already processed' });
         }
 
 	const { error: updReqErr } = await supabase
@@ -587,6 +587,69 @@ app.put('/api/amount-requests/:id/reject', requireAdmin, async (req, res) => {
         }
         console.log('Amount request rejected:', requestId);
         res.json({ success: true });
+});
+
+// Fix existing null status requests (admin only)
+app.put('/api/fix-null-requests', requireAdmin, async (req, res) => {
+    try {
+        const { error } = await supabase
+            .from('amount_requests')
+            .update({ status: 'pending' })
+            .is('status', null);
+        
+        if (error) {
+            console.error('Database error fixing null status:', error);
+            return res.status(500).json({ error: 'Database error' });
+        }
+        
+        console.log('Fixed null status requests');
+        res.json({ success: true });
+    } catch (error) {
+        console.error('Error fixing null requests:', error);
+        res.status(500).json({ error: 'Server error' });
+    }
+});
+
+// Fix existing null/invalid dates (admin only)
+app.put('/api/fix-null-dates', requireAdmin, async (req, res) => {
+    try {
+        const currentTime = new Date().toISOString();
+        
+        // Fix expenses with null or invalid dates
+        const { error: expensesError } = await supabase
+            .from('expenses')
+            .update({ created_at: currentTime })
+            .or('created_at.is.null,created_at.eq.1970-01-01T00:00:00.000Z');
+        
+        // Fix teams with null or invalid dates
+        const { error: teamsError } = await supabase
+            .from('teams')
+            .update({ created_at: currentTime })
+            .or('created_at.is.null,created_at.eq.1970-01-01T00:00:00.000Z');
+        
+        // Fix amount requests with null or invalid dates
+        const { error: requestsError } = await supabase
+            .from('amount_requests')
+            .update({ created_at: currentTime })
+            .or('created_at.is.null,created_at.eq.1970-01-01T00:00:00.000Z');
+        
+        // Fix users with null or invalid dates
+        const { error: usersError } = await supabase
+            .from('users')
+            .update({ created_at: currentTime })
+            .or('created_at.is.null,created_at.eq.1970-01-01T00:00:00.000Z');
+        
+        if (expensesError || teamsError || requestsError || usersError) {
+            console.error('Database error fixing dates:', { expensesError, teamsError, requestsError, usersError });
+            return res.status(500).json({ error: 'Database error' });
+        }
+        
+        console.log('Fixed null/invalid dates');
+        res.json({ success: true });
+    } catch (error) {
+        console.error('Error fixing dates:', error);
+        res.status(500).json({ error: 'Server error' });
+    }
 });
 
 // Dashboard statistics

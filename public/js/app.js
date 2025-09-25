@@ -572,6 +572,53 @@ class FieldWorkBookApp {
         }
     }
 
+    async fixNullRequests() {
+        try {
+            this.showLoading();
+            const response = await fetch('/api/fix-null-requests', {
+                method: 'PUT'
+            });
+            
+            const data = await response.json();
+            this.hideLoading();
+            
+            if (data.success) {
+                this.showToast('Fixed null status requests successfully!', 'success');
+                this.loadAmountRequests();
+            } else {
+                this.showToast(data.error || 'Failed to fix requests', 'error');
+            }
+        } catch (error) {
+            this.hideLoading();
+            console.error('Fix null requests error:', error);
+            this.showToast('Error fixing requests', 'error');
+        }
+    }
+
+    async fixNullDates() {
+        try {
+            this.showLoading();
+            const response = await fetch('/api/fix-null-dates', {
+                method: 'PUT'
+            });
+            
+            const data = await response.json();
+            this.hideLoading();
+            
+            if (data.success) {
+                this.showToast('Fixed invalid dates successfully!', 'success');
+                // Refresh current section data
+                this.loadSectionData(this.currentSection);
+            } else {
+                this.showToast(data.error || 'Failed to fix dates', 'error');
+            }
+        } catch (error) {
+            this.hideLoading();
+            console.error('Fix null dates error:', error);
+            this.showToast('Error fixing dates', 'error');
+        }
+    }
+
     async requestAmount(requestData) {
         try {
             this.showLoading();
@@ -820,7 +867,7 @@ class FieldWorkBookApp {
                         <div class="progress-bar bg-${statusColor}" style="width: ${Math.min(usagePercentage, 100)}%"></div>
                     </div>
                 </td>
-                <td><small class="text-muted">${new Date(team.created_at).toLocaleDateString()}</small></td>
+                <td><small class="text-muted">${this.formatDate(team.created_at)}</small></td>
                 <td>
                     <div class="action-buttons">
                         <button class="btn btn-sm btn-success hover-lift" onclick="app.showAddUserModal(${team.id})" title="Add Member">
@@ -960,7 +1007,7 @@ class FieldWorkBookApp {
                 </div>
                 <div class="text-end">
                     <h5 class="text-success mb-1">$${parseFloat(expense.amount).toFixed(2)}</h5>
-                    <small class="text-muted">${new Date(expense.created_at).toLocaleDateString()}</small>
+                    <small class="text-muted">${this.formatDate(expense.created_at)}</small>
                     ${expense.attachment_path ? '<br><i class="fas fa-paperclip text-info"></i>' : ''}
                 </div>
             </div>
@@ -978,7 +1025,7 @@ class FieldWorkBookApp {
         expenses.forEach(expense => {
             const row = tbody.insertRow();
             row.innerHTML = `
-                <td>${new Date(expense.created_at).toLocaleDateString()}</td>
+                <td>${this.formatDate(expense.created_at)}</td>
                 <td>
                     <strong>${expense.description}</strong><br>
                     <small class="text-muted">${expense.category || 'general'}</small>
@@ -1016,7 +1063,7 @@ class FieldWorkBookApp {
         expenses.forEach(expense => {
             const row = tbody.insertRow();
             row.innerHTML = `
-                <td>${new Date(expense.created_at).toLocaleDateString()}</td>
+                <td>${this.formatDate(expense.created_at)}</td>
                 <td><span class="badge bg-primary">${expense.team_name}</span></td>
                 <td><i class="fas fa-user me-1"></i>${expense.user_name}</td>
                 <td>
@@ -1056,7 +1103,7 @@ class FieldWorkBookApp {
         requests.forEach(request => {
             const row = tbody.insertRow();
             const statusBadge = this.getStatusBadge(request.status);
-            const actions = request.status === 'pending' && this.currentUser.role === 'admin' ? 
+            const actions = (request.status === 'pending' || !request.status) && this.currentUser?.role === 'admin' ? 
                 `<button class="btn btn-sm btn-success me-1" onclick="app.approveRequest(${request.id})" title="Approve">
                     <i class="fas fa-check"></i>
                 </button>
@@ -1066,7 +1113,7 @@ class FieldWorkBookApp {
                 '<span class="text-muted">-</span>';
 
             row.innerHTML = `
-                <td>${new Date(request.created_at).toLocaleDateString()}</td>
+                <td>${this.formatDate(request.created_at)}</td>
                 <td><span class="badge bg-primary">${request.team_name}</span></td>
                 <td><i class="fas fa-user me-1"></i>${request.user_name}</td>
                 <td><span class="badge bg-warning">$${parseFloat(request.requested_amount).toFixed(2)}</span></td>
@@ -1092,7 +1139,27 @@ class FieldWorkBookApp {
             'approved': '<span class="badge bg-success"><i class="fas fa-check me-1"></i>Approved</span>',
             'rejected': '<span class="badge bg-danger"><i class="fas fa-times me-1"></i>Rejected</span>'
         };
-        return badges[status] || status;
+        return badges[status] || '<span class="badge bg-secondary"><i class="fas fa-question me-1"></i>Unknown</span>';
+    }
+
+    // Utility Methods
+    formatDate(dateString) {
+        if (!dateString || dateString === '1970-01-01T00:00:00.000Z') {
+            return 'Today';
+        }
+        try {
+            const date = new Date(dateString);
+            if (date.getTime() === 0 || isNaN(date.getTime())) {
+                return 'Today';
+            }
+            return date.toLocaleDateString('en-US', {
+                year: 'numeric',
+                month: 'short',
+                day: 'numeric'
+            });
+        } catch (error) {
+            return 'Today';
+        }
     }
 
     // Modal Methods
@@ -1124,7 +1191,7 @@ class FieldWorkBookApp {
                                 <button class="btn btn-sm btn-danger hover-scale mb-2" onclick="app.deleteUser(${member.id}, '${member.full_name}')" title="Remove Member">
                                     <i class="fas fa-user-minus"></i>
                                 </button>
-                                <small class="text-muted">Joined: ${new Date(member.created_at).toLocaleDateString()}</small>
+                                <small class="text-muted">Joined: ${this.formatDate(member.created_at)}</small>
                             </div>
                         </div>
                     </div>
