@@ -15,6 +15,8 @@
     <link href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css" rel="stylesheet">
     <!-- DataTables CSS -->
     <link href="https://cdn.datatables.net/1.13.6/css/dataTables.bootstrap5.min.css" rel="stylesheet">
+    <!-- DataTables Responsive CSS -->
+    <link href="https://cdn.datatables.net/responsive/2.5.0/css/responsive.bootstrap5.min.css" rel="stylesheet">
     <!-- Custom CSS -->
     <link href="css/style.css" rel="stylesheet">
 </head>
@@ -84,6 +86,12 @@
                                 <p class="subtitle-text">Team Expense Management</p>
                             </div>
                             <form id="loginForm">
+                                <!-- Error message display -->
+                                <div id="loginErrorAlert" class="alert alert-danger" style="display: none;">
+                                    <i class="fas fa-exclamation-triangle me-2"></i>
+                                    <span id="loginErrorMessage"></span>
+                                </div>
+                                
                                 <div class="mb-3">
                                     <label for="username" class="form-label">Username</label>
                                     <div class="input-group">
@@ -647,6 +655,9 @@
     <!-- DataTables -->
     <script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
     <script src="https://cdn.datatables.net/1.13.6/js/dataTables.bootstrap5.min.js"></script>
+    <!-- DataTables Responsive -->
+    <script src="https://cdn.datatables.net/responsive/2.5.0/js/dataTables.responsive.min.js"></script>
+    <script src="https://cdn.datatables.net/responsive/2.5.0/js/responsive.bootstrap5.min.js"></script>
     <!-- SweetAlert2 -->
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <!-- Custom JS -->

@@ -150,6 +150,7 @@ class FieldWorkBookApp {
     async login(username, password) {
         try {
             this.showLoading();
+            this.hideLoginError(); // Hide any previous error
             console.log('🔐 Attempting login for:', username);
             
             const response = await fetch('/api/login', {
@@ -171,12 +172,15 @@ class FieldWorkBookApp {
                 this.showToast('Welcome ' + data.user.full_name + '!', 'success');
             } else {
                 console.log('❌ Login failed:', data.error);
+                this.showLoginError(data.error || 'Login failed');
                 this.showToast(data.error || 'Login failed', 'error');
             }
         } catch (error) {
             this.hideLoading();
             console.error('Login error:', error);
-            this.showToast('Login failed. Please check your connection.', 'error');
+            const errorMessage = 'Login failed. Please check your connection.';
+            this.showLoginError(errorMessage);
+            this.showToast(errorMessage, 'error');
         }
     }
 
@@ -889,13 +893,32 @@ class FieldWorkBookApp {
         });
 
         $('#teamsTable').DataTable({
-            responsive: true,
+            responsive: {
+                details: {
+                    type: 'column',
+                    target: 'tr'
+                }
+            },
             pageLength: 10,
             order: [[6, 'desc']],
             language: {
                 emptyTable: "No teams created yet"
             },
-            dom: '<"row"<"col-sm-12 col-md-6"l><"col-sm-12 col-md-6"f>>rtip'
+            dom: '<"row"<"col-sm-12 col-md-6"l><"col-sm-12 col-md-6"f>>rt<"row"<"col-sm-12 col-md-5"i><"col-sm-12 col-md-7"p>>',
+            columnDefs: [
+                {
+                    responsivePriority: 1,
+                    targets: [0, 7] // Team name and Actions always visible
+                },
+                {
+                    responsivePriority: 2,
+                    targets: [1, 2, 3] // Location, Initial, Used
+                },
+                {
+                    responsivePriority: 3,
+                    targets: [4, 5, 6] // Remaining, Members, Created - hidden first
+                }
+            ]
         });
     }
 
@@ -1043,12 +1066,27 @@ class FieldWorkBookApp {
         });
 
         $('#myExpensesTable').DataTable({
-            responsive: true,
+            responsive: {
+                details: {
+                    type: 'column',
+                    target: 'tr'
+                }
+            },
             pageLength: 10,
             order: [[0, 'desc']],
             language: {
                 emptyTable: "No expenses recorded yet"
-            }
+            },
+            columnDefs: [
+                {
+                    responsivePriority: 1,
+                    targets: [0, 1, 2] // Date, Description, Amount always visible
+                },
+                {
+                    responsivePriority: 2,
+                    targets: [3] // Attachment - hidden first on small screens
+                }
+            ]
         });
     }
 
@@ -1083,12 +1121,31 @@ class FieldWorkBookApp {
         });
 
         $('#expensesTable').DataTable({
-            responsive: true,
+            responsive: {
+                details: {
+                    type: 'column',
+                    target: 'tr'
+                }
+            },
             pageLength: 10,
             order: [[0, 'desc']],
             language: {
                 emptyTable: "No expenses recorded yet"
-            }
+            },
+            columnDefs: [
+                {
+                    responsivePriority: 1,
+                    targets: [0, 3, 4] // Date, Description, Amount always visible
+                },
+                {
+                    responsivePriority: 2,
+                    targets: [1, 2] // Team, User - less priority
+                },
+                {
+                    responsivePriority: 3,
+                    targets: [5] // Attachment - hidden first
+                }
+            ]
         });
     }
 
@@ -1124,12 +1181,31 @@ class FieldWorkBookApp {
         });
 
         $('#requestsTable').DataTable({
-            responsive: true,
+            responsive: {
+                details: {
+                    type: 'column',
+                    target: 'tr'
+                }
+            },
             pageLength: 10,
             order: [[0, 'desc']],
             language: {
                 emptyTable: "No requests submitted yet"
-            }
+            },
+            columnDefs: [
+                {
+                    responsivePriority: 1,
+                    targets: [0, 3, 5, 6] // Date, Amount, Status, Actions always visible
+                },
+                {
+                    responsivePriority: 2,
+                    targets: [1, 2] // Team, User - less priority
+                },
+                {
+                    responsivePriority: 3,
+                    targets: [4] // Reason - hidden first
+                }
+            ]
         });
     }
 
@@ -1390,7 +1466,12 @@ class FieldWorkBookApp {
     // DataTables Initialization
     initializeDataTables() {
         $.extend(true, $.fn.dataTable.defaults, {
-            responsive: true,
+            responsive: {
+                details: {
+                    type: 'column',
+                    target: 'tr'
+                }
+            },
             pageLength: 10,
             lengthMenu: [[10, 25, 50, -1], [10, 25, 50, "All"]],
             language: {
@@ -1398,13 +1479,21 @@ class FieldWorkBookApp {
                 lengthMenu: "Show _MENU_ entries",
                 info: "Showing _START_ to _END_ of _TOTAL_ entries",
                 infoEmpty: "No entries available",
+                infoFiltered: "(filtered from _MAX_ total entries)",
                 paginate: {
                     first: "First",
                     last: "Last",
                     next: "Next",
                     previous: "Previous"
                 }
-            }
+            },
+            dom: '<"row"<"col-sm-12 col-md-6"l><"col-sm-12 col-md-6"f>>rt<"row"<"col-sm-12 col-md-5"i><"col-sm-12 col-md-7"p>>',
+            columnDefs: [
+                {
+                    targets: '_all',
+                    className: 'text-center'
+                }
+            ]
         });
     }
 
@@ -1415,6 +1504,24 @@ class FieldWorkBookApp {
 
     hideLoading() {
         document.getElementById('loadingSpinner').classList.add('d-none');
+    }
+
+    showLoginError(message) {
+        const errorAlert = document.getElementById('loginErrorAlert');
+        const errorMessage = document.getElementById('loginErrorMessage');
+        if (errorAlert && errorMessage) {
+            errorMessage.textContent = message;
+            errorAlert.style.display = 'block';
+            errorAlert.classList.add('animate__animated', 'animate__fadeInDown');
+        }
+    }
+
+    hideLoginError() {
+        const errorAlert = document.getElementById('loginErrorAlert');
+        if (errorAlert) {
+            errorAlert.style.display = 'none';
+            errorAlert.classList.remove('animate__animated', 'animate__fadeInDown');
+        }
     }
 
     showToast(message, type = 'info') {

@@ -305,6 +305,20 @@ body::before {
     justify-content: center;
 }
 
+/* Login Error Alert Styling */
+#loginErrorAlert {
+    background: linear-gradient(135deg, rgba(255, 74, 74, 0.1), rgba(255, 107, 107, 0.1)) !important;
+    border: 1px solid rgba(255, 74, 74, 0.3) !important;
+    color: #ff6b6b !important;
+    border-radius: var(--border-radius-sm) !important;
+    backdrop-filter: var(--glass-blur) !important;
+    box-shadow: 0 4px 15px rgba(255, 74, 74, 0.2) !important;
+}
+
+#loginErrorAlert i {
+    color: #ff4a4a !important;
+}
+
 .login-card {
     backdrop-filter: var(--glass-blur);
     background: var(--glass-bg);
@@ -688,13 +702,16 @@ body::before {
     box-shadow: var(--shadow-3d);
     background: var(--bg-card);
     backdrop-filter: var(--glass-blur);
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
 }
 
 .table {
     margin: 0;
     color: var(--text-primary);
     background: transparent;
-    
+    min-width: 100%;
+    white-space: nowrap;
 }
 
 .table thead th {
@@ -707,13 +724,13 @@ body::before {
     letter-spacing: 1px;
     padding: 1.5rem 1rem;
     position: relative;
+    white-space: nowrap;
 }
 
 .table tbody tr {
     transition: var(--transition-fast);
     background: var(--bg-card);
     border-bottom: 1px solid var(--glass-border);
-   
 }
 
 .table tbody tr:hover {
@@ -729,6 +746,104 @@ body::before {
     font-weight: 500;
     color: var(--text-primary);
     background-color: #000000;
+    white-space: nowrap;
+}
+
+/* Mobile-first responsive tables */
+@media (max-width: 768px) {
+    .table {
+        font-size: 0.8rem;
+    }
+    
+    .table thead th,
+    .table td {
+        padding: 0.8rem 0.5rem;
+    }
+    
+    /* Hide less important columns on small screens */
+    .table .mobile-hide {
+        display: none;
+    }
+    
+    /* Make action buttons smaller on mobile */
+    .action-buttons .btn {
+        padding: 0.4rem;
+        width: 32px;
+        height: 32px;
+        font-size: 0.75rem;
+    }
+    
+    /* Stack badges vertically on very small screens */
+    .badge {
+        font-size: 0.7rem;
+        padding: 0.4rem 0.8rem;
+        display: inline-block;
+        margin: 0.1rem 0;
+    }
+}
+
+@media (max-width: 576px) {
+    /* Convert tables to card layout on very small screens */
+    .mobile-card-table {
+        display: none;
+    }
+    
+    .mobile-card-view {
+        display: block;
+    }
+    
+    .mobile-card-item {
+        background: var(--bg-card);
+        border: 1px solid var(--glass-border);
+        border-radius: var(--border-radius-sm);
+        margin-bottom: 1rem;
+        padding: 1rem;
+        box-shadow: var(--shadow-3d);
+    }
+    
+    .mobile-card-item .mobile-card-header {
+        font-weight: 600;
+        font-size: 1.1rem;
+        margin-bottom: 0.5rem;
+        color: var(--text-primary);
+    }
+    
+    .mobile-card-item .mobile-card-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 0.3rem;
+        padding: 0.2rem 0;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    }
+    
+    .mobile-card-item .mobile-card-row:last-child {
+        border-bottom: none;
+        margin-bottom: 0;
+    }
+    
+    .mobile-card-row .mobile-card-label {
+        font-weight: 500;
+        color: var(--text-secondary);
+        font-size: 0.85rem;
+    }
+    
+    .mobile-card-row .mobile-card-value {
+        font-weight: 600;
+        color: var(--text-primary);
+    }
+    
+    /* Force table to be responsive by making it scrollable */
+    .force-table-responsive {
+        display: block;
+        width: 100%;
+        overflow-x: auto;
+        white-space: nowrap;
+    }
+    
+    .force-table-responsive table {
+        min-width: 600px; /* Force minimum width */
+    }
 }
 
 /* Enhanced Badges */
@@ -1164,6 +1279,26 @@ h2 {
     .section-subtitle {
         margin-left: 4rem;
     }
+    
+    /* Better navbar responsive */
+    .navbar-nav {
+        text-align: center;
+    }
+    
+    .nav-link {
+        padding: 1rem !important;
+        margin: 0.2rem 0;
+    }
+    
+    /* Stats cards responsive layout */
+    .stats-card .d-flex {
+        flex-direction: column;
+        text-align: center;
+    }
+    
+    .stats-card .avatar-circle {
+        margin: 0 auto 1rem auto;
+    }
 }
 
 @media (max-width: 576px) {
@@ -1214,6 +1349,203 @@ h2 {
         left: 0;
         top: -5px;
     }
+}
+
+/* DataTables Responsive Customization */
+.dtr-details {
+    background: var(--bg-card) !important;
+    border: 1px solid var(--glass-border) !important;
+    border-radius: var(--border-radius-sm) !important;
+    box-shadow: var(--shadow-3d) !important;
+    backdrop-filter: var(--glass-blur) !important;
+    margin: 1rem auto !important;
+    max-width: 100% !important;
+}
+
+/* Force center alignment for DataTables responsive details on all devices */
+table.dataTable tbody tr.dtr-details td {
+    text-align: center !important;
+}
+
+table.dataTable tbody tr.dtr-details {
+    background: transparent !important;
+}
+
+table.dataTable tbody tr.dtr-details td .dtr-details {
+    margin: 0 auto !important;
+    display: block !important;
+    width: 95% !important;
+}
+
+.dtr-details ul {
+    margin: 0 !important;
+    padding: 1.5rem !important;
+    list-style: none !important;
+}
+
+.dtr-details li {
+    border-bottom: 1px solid var(--glass-border) !important;
+    padding: 1rem 0 !important;
+    color: var(--text-primary) !important;
+    display: flex !important;
+    justify-content: space-between !important;
+    align-items: center !important;
+    text-align: center !important;
+}
+
+.dtr-details li:last-child {
+    border-bottom: none !important;
+}
+
+.dtr-details .dtr-title {
+    font-weight: 600 !important;
+    color: var(--text-secondary) !important;
+    min-width: 120px !important;
+    font-size: 0.85rem !important;
+    text-transform: uppercase !important;
+    letter-spacing: 0.5px !important;
+    text-align: left !important;
+}
+
+.dtr-details .dtr-data {
+    color: var(--text-primary) !important;
+    font-weight: 500 !important;
+    flex: 1 !important;
+    text-align: center !important;
+    display: flex !important;
+    justify-content: center !important;
+    align-items: center !important;
+}
+
+/* Make badges and buttons look good in responsive details */
+.dtr-details .badge {
+    font-size: 0.8rem !important;
+    padding: 0.5rem 1rem !important;
+    border-radius: 20px !important;
+    display: inline-block !important;
+}
+
+.dtr-details .btn {
+    padding: 0.5rem 1rem !important;
+    font-size: 0.8rem !important;
+    border-radius: var(--border-radius-sm) !important;
+    display: inline-block !important;
+}
+
+/* Mobile specific improvements for DataTables responsive details */
+@media (max-width: 768px) {
+    /* Target the table row that contains the details */
+    .dtr-details {
+        margin: 0.5rem auto !important;
+        border-radius: var(--border-radius) !important;
+        width: 95% !important;
+        text-align: center !important;
+    }
+    
+    /* Target the table cell containing the details */
+    td.dtr-details {
+        text-align: center !important;
+        padding: 0 !important;
+    }
+    
+    /* Target the details content */
+    .dtr-details ul {
+        padding: 1rem !important;
+        margin: 0 auto !important;
+        width: 100% !important;
+        text-align: center !important;
+    }
+    
+    .dtr-details li {
+        padding: 0.8rem 0 !important;
+        flex-direction: column !important;
+        text-align: center !important;
+        gap: 0.5rem !important;
+        justify-content: center !important;
+        align-items: center !important;
+    }
+    
+    .dtr-details .dtr-title {
+        font-size: 0.75rem !important;
+        min-width: auto !important;
+        text-align: center !important;
+        opacity: 0.8 !important;
+        display: block !important;
+        width: 100% !important;
+    }
+    
+    .dtr-details .dtr-data {
+        text-align: center !important;
+        font-size: 1rem !important;
+        font-weight: 600 !important;
+        display: block !important;
+        width: 100% !important;
+        justify-content: center !important;
+    }
+    
+    /* Force center alignment for the entire details row */
+    .dataTable tbody tr.dtr-details {
+        text-align: center !important;
+    }
+    
+    .dataTable tbody tr.dtr-details td {
+        text-align: center !important;
+        padding: 0.5rem !important;
+    }
+}
+
+/* DataTables control button styling */
+.dtr-control {
+    cursor: pointer !important;
+    color: var(--neon-cyan) !important;
+    font-size: 1.2em !important;
+}
+
+.dtr-control:before {
+    content: '⊕' !important;
+}
+
+.dtr-control.dtr-open:before {
+    content: '⊖' !important;
+}
+
+/* DataTables wrapper styling */
+.dataTables_wrapper {
+    color: var(--text-primary) !important;
+}
+
+.dataTables_wrapper .dataTables_length select,
+.dataTables_wrapper .dataTables_filter input {
+    background: var(--bg-card) !important;
+    color: var(--text-primary) !important;
+    border: 1px solid var(--glass-border) !important;
+    border-radius: var(--border-radius-sm) !important;
+    padding: 0.5rem !important;
+}
+
+.dataTables_wrapper .dataTables_info,
+.dataTables_wrapper .dataTables_length,
+.dataTables_wrapper .dataTables_filter {
+    color: var(--text-secondary) !important;
+}
+
+.dataTables_wrapper .dataTables_paginate .paginate_button {
+    background: var(--bg-card) !important;
+    border: 1px solid var(--glass-border) !important;
+    color: var(--text-primary) !important;
+    border-radius: var(--border-radius-sm) !important;
+    margin: 0 0.2rem !important;
+    padding: 0.5rem 1rem !important;
+}
+
+.dataTables_wrapper .dataTables_paginate .paginate_button:hover {
+    background: var(--primary-gradient) !important;
+    color: white !important;
+}
+
+.dataTables_wrapper .dataTables_paginate .paginate_button.current {
+    background: var(--primary-gradient) !important;
+    color: white !important;
 }
 
 /* Custom Scrollbar */
