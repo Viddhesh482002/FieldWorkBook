@@ -1307,13 +1307,22 @@ class FieldWorkBookApp {
         // Logout
         document.getElementById('logoutBtn').addEventListener('click', (e) => {
             e.preventDefault();
+            this.closeMobileMenu(); // Close mobile menu when logout is clicked
             this.logout();
         });
 
-        // Navigation - Add mobile menu close functionality to all nav links
-        document.querySelectorAll('.nav-link').forEach(link => {
+        // Navigation - Add mobile menu close functionality to main nav links only (exclude dropdowns)
+        document.querySelectorAll('.nav-link:not(.dropdown-toggle)').forEach(link => {
             link.addEventListener('click', (e) => {
-                // Close mobile menu when any nav link is clicked
+                // Close mobile menu when main nav links are clicked (not dropdowns)
+                this.closeMobileMenu();
+            });
+        });
+
+        // Handle dropdown items that should close mobile menu
+        document.querySelectorAll('.dropdown-item').forEach(item => {
+            item.addEventListener('click', (e) => {
+                // Close mobile menu when dropdown items are clicked
                 this.closeMobileMenu();
             });
         });
