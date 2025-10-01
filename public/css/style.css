@@ -76,6 +76,7 @@ body {
     position: relative;
 }
 
+
 /* 3D Background Elements */
 .bg-3d-container {
     position: fixed;
@@ -780,9 +781,17 @@ body::before {
         display: inline-block;
         margin: 0.1rem 0;
     }
+    .navbar-toggler-icon{
+        background-color: #ffffff;
+    }
 }
 
 @media (max-width: 576px) {
+
+
+    .navbar-toggler-icon{
+        background-color: #ffffff;
+    }
     /* Convert tables to card layout on very small screens */
     .mobile-card-table {
         display: none;
@@ -1294,6 +1303,7 @@ h2 {
     .stats-card .d-flex {
         flex-direction: column;
         text-align: center;
+        display;
     }
     
     .stats-card .avatar-circle {
@@ -1479,7 +1489,6 @@ table.dataTable tbody tr.dtr-details td .dtr-details {
         font-size: 1rem !important;
         font-weight: 600 !important;
         display: block !important;
-        width: 100% !important;
         justify-content: center !important;
     }
     
