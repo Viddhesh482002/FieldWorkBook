@@ -1258,27 +1258,21 @@ class FieldWorkBookApp {
         // Set file name
         previewFileName.textContent = fileName;
         
-        // Set download button - use direct static file serving for downloads
+        // Set download button - force actual download
         downloadBtn.onclick = () => {
             console.log('Download clicked for:', cleanFilePath);
-            window.open(`/uploads/${cleanFilePath}`, '_blank');
+            // Create a temporary anchor element to trigger download
+            const link = document.createElement('a');
+            link.href = `${serverUrl}/uploads/${cleanFilePath}`;
+            link.download = fileName; // Set the filename for download
+            link.target = '_blank';
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
         };
         
         // Clear previous content
         previewContent.innerHTML = '';
-        
-        // First, check if file exists by trying to fetch it
-        try {
-            const response = await fetch(`/uploads/${cleanFilePath}`, { method: 'HEAD' });
-            if (!response.ok) {
-                throw new Error(`File not found: ${cleanFilePath}`);
-            }
-        } catch (error) {
-            console.error('File existence check failed:', error);
-            this.showFilePreviewError(`File not found on server: ${cleanFilePath}<br><small class="text-muted">The file may have been deleted or moved.</small>`);
-            modal.show();
-            return;
-        }
         
         // Determine file type and show appropriate preview
         const fileExtension = fileName.toLowerCase().split('.').pop();
@@ -1297,6 +1291,9 @@ class FieldWorkBookApp {
             img.onload = () => {
                 console.log('Image loaded successfully:', cleanFilePath);
                 previewContent.innerHTML = '';
+                previewContent.style.display = 'flex';
+                previewContent.style.justifyContent = 'center';
+                previewContent.style.alignItems = 'center';
                 previewContent.appendChild(img);
             };
             
@@ -1321,6 +1318,9 @@ class FieldWorkBookApp {
             iframe.onload = () => {
                 console.log('PDF loaded successfully:', cleanFilePath);
                 previewContent.innerHTML = '';
+                previewContent.style.display = 'flex';
+                previewContent.style.justifyContent = 'center';
+                previewContent.style.alignItems = 'center';
                 previewContent.appendChild(iframe);
             };
             
