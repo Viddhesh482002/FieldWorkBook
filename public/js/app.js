@@ -1255,6 +1255,10 @@ class FieldWorkBookApp {
         const cleanFilePath = filePath.split('/').pop(); // Get just the filename
         console.log('File preview requested:', { filePath, fileName, cleanFilePath });
         
+        // Get current server URL (works for both local and live)
+        const serverUrl = window.location.origin; // Gets http://localhost:3000 or https://yourdomain.com
+        console.log('Server URL:', serverUrl);
+        
         // Set file name
         previewFileName.textContent = fileName;
         
@@ -1280,7 +1284,7 @@ class FieldWorkBookApp {
         if (['jpg', 'jpeg', 'png', 'gif', 'webp'].includes(fileExtension)) {
             // Image preview - use direct static file serving
             const img = document.createElement('img');
-            img.src = `/uploads/${cleanFilePath}`;
+            img.src = `${serverUrl}/uploads/${cleanFilePath}`;
             img.className = 'img-fluid';
             img.style.maxHeight = '70vh';
             img.style.objectFit = 'contain';
@@ -1307,7 +1311,7 @@ class FieldWorkBookApp {
         } else if (fileExtension === 'pdf') {
             // PDF preview - use direct static file serving
             const iframe = document.createElement('iframe');
-            iframe.src = `/uploads/${cleanFilePath}#toolbar=1&navpanes=1&scrollbar=1`;
+            iframe.src = `${serverUrl}/uploads/${cleanFilePath}#toolbar=1&navpanes=1&scrollbar=1`;
             iframe.style.width = '100%';
             iframe.style.height = '70vh';
             iframe.style.border = 'none';
