@@ -1056,9 +1056,9 @@ class FieldWorkBookApp {
                 <td><span class="badge bg-success">$${parseFloat(expense.amount).toFixed(2)}</span></td>
                 <td>
                     ${expense.attachment_path ? 
-                        `<a href="/api/download/${expense.attachment_path}" class="btn btn-sm btn-outline-primary" target="_blank" title="${expense.attachment_name}">
-                            <i class="fas fa-download me-1"></i>View
-                        </a>` : 
+                        `<button class="btn btn-sm btn-outline-primary" onclick="app.showFilePreview('${expense.attachment_path}', '${expense.attachment_name}')" title="${expense.attachment_name}">
+                            <i class="fas fa-eye me-1"></i>View
+                        </button>` : 
                         '<span class="text-muted">No attachment</span>'
                     }
                 </td>
@@ -1111,9 +1111,9 @@ class FieldWorkBookApp {
                 <td><span class="badge bg-success">$${parseFloat(expense.amount).toFixed(2)}</span></td>
                 <td>
                     ${expense.attachment_path ? 
-                        `<a href="/api/download/${expense.attachment_path}" class="btn btn-sm btn-outline-primary" target="_blank" title="${expense.attachment_name}">
-                            <i class="fas fa-download me-1"></i>View
-                        </a>` : 
+                        `<button class="btn btn-sm btn-outline-primary" onclick="app.showFilePreview('${expense.attachment_path}', '${expense.attachment_name}')" title="${expense.attachment_name}">
+                            <i class="fas fa-eye me-1"></i>View
+                        </button>` : 
                         '<span class="text-muted">No attachment</span>'
                     }
                 </td>
@@ -1242,6 +1242,117 @@ class FieldWorkBookApp {
     showAddUserModal(teamId) {
         document.getElementById('userTeamId').value = teamId;
         new bootstrap.Modal(document.getElementById('addUserModal')).show();
+    }
+
+    // File Preview Methods
+    async showFilePreview(filePath, fileName) {
+        const modal = new bootstrap.Modal(document.getElementById('filePreviewModal'));
+        const previewContent = document.getElementById('previewContent');
+        const previewFileName = document.getElementById('previewFileName');
+        const downloadBtn = document.getElementById('downloadPreviewBtn');
+        
+        // Clean file path - ensure we only use the filename, not full path
+        const cleanFilePath = filePath.split('/').pop(); // Get just the filename
+        console.log('File preview requested:', { filePath, fileName, cleanFilePath });
+        
+        // Set file name
+        previewFileName.textContent = fileName;
+        
+        // Set download button - use direct static file serving for downloads
+        downloadBtn.onclick = () => {
+            console.log('Download clicked for:', cleanFilePath);
+            window.open(`/uploads/${cleanFilePath}`, '_blank');
+        };
+        
+        // Clear previous content
+        previewContent.innerHTML = '';
+        
+        // First, check if file exists by trying to fetch it
+        try {
+            const response = await fetch(`/uploads/${cleanFilePath}`, { method: 'HEAD' });
+            if (!response.ok) {
+                throw new Error(`File not found: ${cleanFilePath}`);
+            }
+        } catch (error) {
+            console.error('File existence check failed:', error);
+            this.showFilePreviewError(`File not found on server: ${cleanFilePath}<br><small class="text-muted">The file may have been deleted or moved.</small>`);
+            modal.show();
+            return;
+        }
+        
+        // Determine file type and show appropriate preview
+        const fileExtension = fileName.toLowerCase().split('.').pop();
+        
+        if (['jpg', 'jpeg', 'png', 'gif', 'webp'].includes(fileExtension)) {
+            // Image preview - use direct static file serving
+            const img = document.createElement('img');
+            img.src = `/uploads/${cleanFilePath}`;
+            img.className = 'img-fluid';
+            img.style.maxHeight = '70vh';
+            img.style.objectFit = 'contain';
+            img.style.borderRadius = 'var(--border-radius-sm)';
+            img.style.boxShadow = 'var(--shadow-3d)';
+            img.alt = fileName;
+            
+            img.onload = () => {
+                console.log('Image loaded successfully:', cleanFilePath);
+                previewContent.innerHTML = '';
+                previewContent.appendChild(img);
+            };
+            
+            img.onerror = (e) => {
+                console.error('Image load error:', e, 'File:', cleanFilePath);
+                this.showFilePreviewError(`Failed to load image: ${cleanFilePath}<br><small class="text-muted">The file may be corrupted or inaccessible.</small>`);
+            };
+            
+            previewContent.innerHTML = '<div class="text-center"><div class="spinner-border text-primary" role="status"><span class="visually-hidden">Loading...</span></div><p class="mt-2">Loading image...</p></div>';
+            
+        } else if (fileExtension === 'pdf') {
+            // PDF preview - use direct static file serving
+            const iframe = document.createElement('iframe');
+            iframe.src = `/uploads/${cleanFilePath}#toolbar=1&navpanes=1&scrollbar=1`;
+            iframe.style.width = '100%';
+            iframe.style.height = '70vh';
+            iframe.style.border = 'none';
+            iframe.style.borderRadius = 'var(--border-radius-sm)';
+            iframe.style.boxShadow = 'var(--shadow-3d)';
+            iframe.title = fileName;
+            
+            iframe.onload = () => {
+                console.log('PDF loaded successfully:', cleanFilePath);
+                previewContent.innerHTML = '';
+                previewContent.appendChild(iframe);
+            };
+            
+            iframe.onerror = (e) => {
+                console.error('PDF load error:', e, 'File:', cleanFilePath);
+                this.showFilePreviewError(`Failed to load PDF: ${cleanFilePath}<br><small class="text-muted">The file may be corrupted or inaccessible.</small>`);
+            };
+            
+            previewContent.innerHTML = '<div class="text-center"><div class="spinner-border text-primary" role="status"><span class="visually-hidden">Loading...</span></div><p class="mt-2">Loading PDF...</p></div>';
+            
+        } else {
+            // Unsupported file type - show download option
+            this.showFilePreviewError(`Preview not available for .${fileExtension} files. Click download to view the file.`);
+        }
+        
+        modal.show();
+    }
+    
+    showFilePreviewError(message) {
+        const previewContent = document.getElementById('previewContent');
+        previewContent.innerHTML = `
+            <div class="text-center p-5">
+                <div class="mb-4">
+                    <i class="fas fa-exclamation-triangle fa-4x text-warning"></i>
+                </div>
+                <h5 class="text-muted mb-3">File Preview Unavailable</h5>
+                <div class="text-secondary">${message}</div>
+                <button class="btn btn-primary mt-3" onclick="document.getElementById('downloadPreviewBtn').click()">
+                    <i class="fas fa-download me-1"></i>Try Download
+                </button>
+            </div>
+        `;
     }
 
     async viewTeamDetails(teamId) {

@@ -640,6 +640,31 @@
         </div>
     </div>
 
+    <!-- File Preview Modal -->
+    <div class="modal fade" id="filePreviewModal" tabindex="-1">
+        <div class="modal-dialog modal-lg modal-fullscreen-lg-down">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title"><i class="fas fa-file me-2"></i><span id="previewFileName">File Preview</span></h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body p-0">
+                    <div id="previewContainer" class="d-flex justify-content-center align-items-center" style="min-height: 400px;">
+                        <div id="previewContent" class="w-100 h-100">
+                            <!-- Preview content will be loaded here -->
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                    <button type="button" class="btn btn-primary" id="downloadPreviewBtn">
+                        <i class="fas fa-download me-1"></i>Download
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- Loading Spinner -->
     <div id="loadingSpinner" class="d-none">
         <div class="spinner-border text-primary" role="status">

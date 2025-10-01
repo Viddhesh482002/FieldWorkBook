@@ -943,6 +943,46 @@ body::before {
     transform: perspective(1000px) rotateX(0deg);
 }
 
+/* File Preview Modal Specific Styles */
+#filePreviewModal .modal-content {
+    background: var(--bg-primary);
+    border: 1px solid var(--glass-border);
+}
+
+#filePreviewModal .modal-header {
+    background: var(--primary-gradient);
+    border-bottom: 1px solid var(--glass-border);
+}
+
+#filePreviewModal .modal-body {
+    background: var(--bg-secondary);
+    padding: 0;
+}
+
+#filePreviewModal .modal-footer {
+    background: var(--bg-secondary);
+    border-top: 1px solid var(--glass-border);
+}
+
+#previewContent {
+    background: var(--bg-secondary);
+    border-radius: var(--border-radius-sm);
+    overflow: hidden;
+}
+
+#previewContent img {
+    transition: var(--transition-normal);
+}
+
+#previewContent img:hover {
+    transform: scale(1.02);
+}
+
+#previewContent iframe {
+    background: white;
+    border-radius: var(--border-radius-sm);
+}
+
 .modal-header {
     background: var(--primary-gradient);
     color: white;
