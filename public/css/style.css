@@ -1303,7 +1303,7 @@ h2 {
     .stats-card .d-flex {
         flex-direction: column;
         text-align: center;
-        display;
+        display: none;
     }
     
     .stats-card .avatar-circle {

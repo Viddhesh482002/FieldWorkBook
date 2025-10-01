@@ -1310,7 +1310,15 @@ class FieldWorkBookApp {
             this.logout();
         });
 
-        // Navigation
+        // Navigation - Add mobile menu close functionality to all nav links
+        document.querySelectorAll('.nav-link').forEach(link => {
+            link.addEventListener('click', (e) => {
+                // Close mobile menu when any nav link is clicked
+                this.closeMobileMenu();
+            });
+        });
+
+        // Specific navigation handlers
         document.getElementById('dashboardLink').addEventListener('click', (e) => {
             e.preventDefault();
             this.showSection('dashboard');
@@ -1498,6 +1506,27 @@ class FieldWorkBookApp {
     }
 
     // Utility Methods
+    closeMobileMenu() {
+        // Close Bootstrap mobile menu if it's open
+        const navbarCollapse = document.getElementById('navbarNav');
+        if (navbarCollapse && navbarCollapse.classList.contains('show')) {
+            // Use Bootstrap's collapse method to properly close the menu
+            const bsCollapse = bootstrap.Collapse.getInstance(navbarCollapse) || 
+                              new bootstrap.Collapse(navbarCollapse, {
+                                  toggle: false
+                              });
+            bsCollapse.hide();
+            
+            // Fallback: manually remove classes if Bootstrap method fails
+            setTimeout(() => {
+                if (navbarCollapse.classList.contains('show')) {
+                    navbarCollapse.classList.remove('show');
+                    navbarCollapse.classList.add('collapse');
+                }
+            }, 100);
+        }
+    }
+
     showLoading() {
         document.getElementById('loadingSpinner').classList.remove('d-none');
     }
