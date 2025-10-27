@@ -276,13 +276,23 @@ class FieldWorkBookApp {
         // Show/hide role-specific elements
         const adminElements = document.querySelectorAll('.admin-only');
         const fieldStaffElements = document.querySelectorAll('.field-staff-only');
+        const partnerOnlyElements = document.querySelectorAll('.partner-only');
         
-        if (this.currentUser.role === 'admin') {
+        if (this.currentUser.role === 'admin' || this.currentUser.role === 'partner') {
+            // Both admin and partner see admin dashboard and features
             adminElements.forEach(el => el.style.display = 'block');
             fieldStaffElements.forEach(el => el.style.display = 'none');
             document.getElementById('adminDashboard').style.display = 'block';
             document.getElementById('fieldStaffDashboard').style.display = 'none';
+            
+            // Hide partner-only elements from partners (like Create Partner button)
+            if (this.currentUser.role === 'partner') {
+                partnerOnlyElements.forEach(el => el.style.display = 'none');
+            } else {
+                partnerOnlyElements.forEach(el => el.style.display = 'block');
+            }
         } else {
+            // Field staff see limited access
             adminElements.forEach(el => el.style.display = 'none');
             fieldStaffElements.forEach(el => el.style.display = 'block');
             document.getElementById('adminDashboard').style.display = 'none';
@@ -343,7 +353,7 @@ class FieldWorkBookApp {
 
     // Data Loading Methods
     async loadDashboardData() {
-        if (this.currentUser.role === 'admin') {
+        if (this.currentUser.role === 'admin' || this.currentUser.role === 'partner') {
             await this.loadAdminDashboard();
         } else {
             await this.loadFieldStaffDashboard();
@@ -436,11 +446,17 @@ class FieldWorkBookApp {
             case 'teams':
                 await this.loadTeams();
                 break;
+            case 'partners':
+                await this.loadPartners();
+                break;
             case 'expenses':
                 await this.loadExpenses();
                 break;
             case 'requests':
                 await this.loadAmountRequests();
+                break;
+            case 'partnerReport':
+                await this.loadPartnerReportSection();
                 break;
         }
     }
@@ -519,6 +535,180 @@ class FieldWorkBookApp {
             console.error('Add user error:', error);
             this.showToast('Error adding team member', 'error');
         }
+    }
+
+    // Partners Management
+    async loadPartners() {
+        try {
+            console.log('🤝 Loading partners...');
+            const response = await fetch('/api/partners');
+            const partners = await response.json();
+            this.populatePartnersTable(partners);
+            
+            // Also populate the team dropdown in create partner modal
+            const teamsResponse = await fetch('/api/teams');
+            const teams = await teamsResponse.json();
+            const teamSelect = document.getElementById('partnerTeamId');
+            if (teamSelect) {
+                teamSelect.innerHTML = '<option value="">No Team (Partner only)</option>';
+                teams.forEach(team => {
+                    const option = document.createElement('option');
+                    option.value = team.id;
+                    option.textContent = `${team.name} (${team.location})`;
+                    teamSelect.appendChild(option);
+                });
+            }
+        } catch (error) {
+            console.error('Error loading partners:', error);
+            this.showToast('Error loading partners', 'error');
+        }
+    }
+
+    async createPartner(partnerData) {
+        try {
+            this.showLoading();
+            console.log('🤝 Creating partner:', partnerData.full_name);
+            
+            const response = await fetch('/api/partners', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(partnerData)
+            });
+
+            const data = await response.json();
+            this.hideLoading();
+
+            if (data.success) {
+                this.showToast('Partner created successfully!', 'success');
+                this.loadPartners();
+                bootstrap.Modal.getInstance(document.getElementById('createPartnerModal')).hide();
+                document.getElementById('createPartnerForm').reset();
+            } else {
+                this.showToast(data.error || 'Failed to create partner', 'error');
+            }
+        } catch (error) {
+            this.hideLoading();
+            console.error('Create partner error:', error);
+            this.showToast('Error creating partner', 'error');
+        }
+    }
+
+    async deletePartner(partnerId, partnerName) {
+        try {
+            const result = await Swal.fire({
+                title: 'Delete Partner?',
+                text: `This will permanently delete ${partnerName}. This action cannot be undone!`,
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#dc3545',
+                cancelButtonColor: '#6c757d',
+                confirmButtonText: 'Yes, delete it!',
+                cancelButtonText: 'Cancel',
+                background: 'rgba(255, 255, 255, 0.95)',
+                backdrop: 'rgba(0,0,0,0.4)'
+            });
+
+            if (result.isConfirmed) {
+                this.showLoading();
+                console.log('🗑️ Deleting partner:', partnerId);
+                
+                const response = await fetch(`/api/partners/${partnerId}`, {
+                    method: 'DELETE'
+                });
+
+                const data = await response.json();
+                this.hideLoading();
+
+                if (data.success) {
+                    await Swal.fire({
+                        title: 'Deleted!',
+                        text: `${partnerName} has been deleted successfully.`,
+                        icon: 'success',
+                        timer: 2000,
+                        showConfirmButton: false,
+                        background: 'rgba(255, 255, 255, 0.95)'
+                    });
+                    this.loadPartners();
+                } else {
+                    this.showToast(data.error || 'Failed to delete partner', 'error');
+                }
+            }
+        } catch (error) {
+            this.hideLoading();
+            console.error('Delete partner error:', error);
+            this.showToast('Error deleting partner', 'error');
+        }
+    }
+
+    populatePartnersTable(partners) {
+        if ($.fn.DataTable.isDataTable('#partnersTable')) {
+            $('#partnersTable').DataTable().destroy();
+        }
+
+        const tbody = document.querySelector('#partnersTable tbody');
+        tbody.innerHTML = '';
+
+        partners.forEach((partner, index) => {
+            const row = tbody.insertRow();
+            row.innerHTML = `
+                <td>
+                    <div class="d-flex align-items-center">
+                        <div class="me-3">
+                            <div class="avatar-circle bg-primary">
+                                <i class="fas fa-handshake text-white"></i>
+                            </div>
+                        </div>
+                        <div>
+                            <strong class="text-gradient">${partner.full_name}</strong>
+                        </div>
+                    </div>
+                </td>
+                <td><span class="fw-bold">${partner.username}</span></td>
+                <td>${partner.email || '<span class="text-muted">No email</span>'}</td>
+                <td><span class="badge bg-info">${partner.team_name || 'No Team'}</span></td>
+                <td><small class="text-muted">${this.formatDate(partner.created_at)}</small></td>
+                <td>
+                    <div class="action-buttons">
+                        <button class="btn btn-sm btn-danger hover-lift" onclick="app.deletePartner(${partner.id}, '${partner.full_name}')" title="Delete Partner">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </div>
+                </td>
+            `;
+            
+            row.classList.add('animate-fade-in');
+        });
+
+        $('#partnersTable').DataTable({
+            responsive: {
+                details: {
+                    type: 'column',
+                    target: 'tr'
+                }
+            },
+            pageLength: 10,
+            order: [[4, 'desc']],
+            language: {
+                emptyTable: "No partners created yet. Click 'Create Partner' to add one."
+            },
+            dom: '<"row"<"col-sm-12 col-md-6"l><"col-sm-12 col-md-6"f>>rt<"row"<"col-sm-12 col-md-5"i><"col-sm-12 col-md-7"p>>',
+            columnDefs: [
+                {
+                    responsivePriority: 1,
+                    targets: [0, 5] // Partner name and Actions always visible
+                },
+                {
+                    responsivePriority: 2,
+                    targets: [1, 2] // Username, Email
+                },
+                {
+                    responsivePriority: 3,
+                    targets: [3, 4] // Team, Created - hidden first
+                }
+            ]
+        });
     }
 
     // Expenses Management
@@ -728,6 +918,335 @@ class FieldWorkBookApp {
             this.hideLoading();
             console.error('Reject request error:', error);
             this.showToast('Error rejecting request', 'error');
+        }
+    }
+
+    // Partner Report Methods
+    currentPartnerReportData = null;
+
+    async loadPartnerReportSection() {
+        try {
+            console.log('🤝 Loading partner report section...');
+            
+            // Load partners for comparison (partners allocate/approve amounts)
+            const response = await fetch('/api/partners');
+            
+            if (!response.ok) {
+                throw new Error(`Failed to fetch partners: ${response.status}`);
+            }
+            
+            const partners = await response.json();
+            
+            console.log('Partners loaded for report:', partners);
+            
+            // Populate partner dropdowns
+            const partner1Select = document.getElementById('partner1Select');
+            const partner2Select = document.getElementById('partner2Select');
+            
+            if (!partner1Select || !partner2Select) {
+                console.error('Partner select elements not found');
+                return;
+            }
+            
+            partner1Select.innerHTML = '<option value="">Select Partner 1</option>';
+            partner2Select.innerHTML = '<option value="">Select Partner 2</option>';
+            
+            if (!partners || partners.length === 0) {
+                this.showToast('No partners found. Please create partners first.', 'warning');
+                partner1Select.innerHTML += '<option value="" disabled>No partners available</option>';
+                partner2Select.innerHTML += '<option value="" disabled>No partners available</option>';
+                return;
+            }
+            
+            partners.forEach(partner => {
+                const option1 = document.createElement('option');
+                option1.value = partner.id;
+                option1.textContent = `${partner.full_name}`;
+                partner1Select.appendChild(option1);
+                
+                const option2 = document.createElement('option');
+                option2.value = partner.id;
+                option2.textContent = `${partner.full_name}`;
+                partner2Select.appendChild(option2);
+            });
+            
+            // Set default date range (last 30 days)
+            const toDate = new Date();
+            const fromDate = new Date();
+            fromDate.setDate(fromDate.getDate() - 30);
+            
+            const toDateInput = document.getElementById('toDate');
+            const fromDateInput = document.getElementById('fromDate');
+            
+            if (toDateInput && fromDateInput) {
+                toDateInput.valueAsDate = toDate;
+                fromDateInput.valueAsDate = fromDate;
+            }
+            
+        } catch (error) {
+            console.error('Error loading partner report section:', error);
+            this.showToast('Error loading partner report: ' + error.message, 'error');
+        }
+    }
+
+    async generatePartnerReport() {
+        try {
+            const partner1Select = document.getElementById('partner1Select');
+            const partner2Select = document.getElementById('partner2Select');
+            const fromDateInput = document.getElementById('fromDate');
+            const toDateInput = document.getElementById('toDate');
+            
+            // Check if elements exist
+            if (!partner1Select || !partner2Select || !fromDateInput || !toDateInput) {
+                console.error('Required form elements not found');
+                this.showToast('Form elements not found. Please refresh the page.', 'error');
+                return;
+            }
+            
+            const partner1Id = partner1Select.value;
+            const partner2Id = partner2Select.value;
+            const fromDate = fromDateInput.value;
+            const toDate = toDateInput.value;
+            
+            console.log('Form values:', { partner1Id, partner2Id, fromDate, toDate });
+            
+            // Validation
+            if (!partner1Id || !partner2Id) {
+                this.showToast('Please select both partners', 'error');
+                return;
+            }
+            
+            if (partner1Id === partner2Id) {
+                this.showToast('Please select different partners for comparison', 'error');
+                return;
+            }
+            
+            if (!fromDate || !toDate) {
+                this.showToast('Please select date range', 'error');
+                return;
+            }
+            
+            // Validate date order
+            if (new Date(fromDate) > new Date(toDate)) {
+                this.showToast('From Date must be before To Date', 'error');
+                return;
+            }
+            
+            this.showLoading();
+            console.log('📊 Generating partner report...');
+            
+            // Fetch report data
+            const params = new URLSearchParams({
+                partner1_id: partner1Id,
+                partner2_id: partner2Id,
+                from_date: fromDate,
+                to_date: toDate
+            });
+            
+            console.log('Fetching report with params:', params.toString());
+            
+            const response = await fetch(`/api/partner-report?${params}`);
+            
+            console.log('Response status:', response.status);
+            
+            if (!response.ok) {
+                throw new Error(`Server error: ${response.status} ${response.statusText}`);
+            }
+            
+            const reportData = await response.json();
+            
+            console.log('Report data received:', reportData);
+            
+            this.hideLoading();
+            
+            if (reportData.error) {
+                this.showToast(reportData.error, 'error');
+                return;
+            }
+            
+            // Check if data is empty
+            if (!reportData.data || reportData.data.length === 0) {
+                this.showToast('No transactions found. Ensure partners have created teams or approved requests in this date range.', 'info');
+                // Still display the report with zero values
+            }
+            
+            // Store report data for export
+            this.currentPartnerReportData = reportData;
+            
+            // Update UI
+            this.displayPartnerReport(reportData);
+            
+            this.showToast('Report generated successfully!', 'success');
+            
+        } catch (error) {
+            this.hideLoading();
+            console.error('Error generating partner report:', error);
+            this.showToast('Error generating report: ' + error.message, 'error');
+        }
+    }
+
+    displayPartnerReport(reportData) {
+        // Hide empty state, show summary
+        document.getElementById('partnerReportEmpty').style.display = 'none';
+        document.getElementById('partnerReportSummary').style.display = 'block';
+        
+        // Update summary tiles
+        document.getElementById('partner1Label').textContent = `${reportData.partner1_name} Total`;
+        document.getElementById('partner2Label').textContent = `${reportData.partner2_name} Total`;
+        
+        this.animateCounter('partner1Total', '$' + reportData.totals.partner1_total.toFixed(2));
+        this.animateCounter('partner2Total', '$' + reportData.totals.partner2_total.toFixed(2));
+        this.animateCounter('totalDifference', '$' + reportData.totals.total_difference.toFixed(2));
+        
+        // Update table headers
+        document.getElementById('partner1ColHeader').textContent = reportData.partner1_name;
+        document.getElementById('partner2ColHeader').textContent = reportData.partner2_name;
+        
+        // Populate table
+        this.populatePartnerReportTable(reportData);
+    }
+
+    populatePartnerReportTable(reportData) {
+        if ($.fn.DataTable.isDataTable('#partnerReportTable')) {
+            $('#partnerReportTable').DataTable().destroy();
+        }
+        
+        const tbody = document.querySelector('#partnerReportTable tbody');
+        tbody.innerHTML = '';
+        
+        reportData.data.forEach(item => {
+            const row = tbody.insertRow();
+            row.innerHTML = `
+                <td>${this.formatDate(item.date)}</td>
+                <td>
+                    <strong>${item.description}</strong><br>
+                    <small class="text-muted">${item.category}</small>
+                </td>
+                <td><span class="badge bg-success">$${item.partner1_amount.toFixed(2)}</span></td>
+                <td><span class="badge bg-info">$${item.partner2_amount.toFixed(2)}</span></td>
+                <td><span class="badge bg-warning">$${item.difference.toFixed(2)}</span></td>
+                <td><span class="badge bg-primary">${item.team_name}</span></td>
+            `;
+        });
+        
+        // Update footer totals
+        document.getElementById('partner1FooterTotal').textContent = '$' + reportData.totals.partner1_total.toFixed(2);
+        document.getElementById('partner2FooterTotal').textContent = '$' + reportData.totals.partner2_total.toFixed(2);
+        document.getElementById('differenceFooterTotal').textContent = '$' + (reportData.totals.partner1_total - reportData.totals.partner2_total).toFixed(2);
+        
+        $('#partnerReportTable').DataTable({
+            responsive: {
+                details: {
+                    type: 'column',
+                    target: 'tr'
+                }
+            },
+            pageLength: 25,
+            order: [[0, 'desc']],
+            language: {
+                emptyTable: "No transactions found for the selected criteria"
+            },
+            columnDefs: [
+                {
+                    responsivePriority: 1,
+                    targets: [0, 1, 2, 3, 4] // Date, Description, Amounts always visible
+                },
+                {
+                    responsivePriority: 2,
+                    targets: [5] // Team - hidden first
+                }
+            ]
+        });
+    }
+
+    async exportPartnerReportToExcel() {
+        try {
+            if (!this.currentPartnerReportData) {
+                this.showToast('Please generate a report first', 'error');
+                return;
+            }
+            
+            this.showLoading();
+            console.log('📊 Exporting to Excel...', {
+                partner1: this.currentPartnerReportData.partner1_name,
+                partner2: this.currentPartnerReportData.partner2_name,
+                rows: this.currentPartnerReportData.data?.length || 0,
+                totals: this.currentPartnerReportData.totals
+            });
+            
+            const response = await fetch('/api/partner-report/export/excel', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(this.currentPartnerReportData)
+            });
+            
+            if (!response.ok) {
+                throw new Error('Export failed');
+            }
+            
+            // Download file
+            const blob = await response.blob();
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `partner-report-${Date.now()}.xlsx`;
+            document.body.appendChild(a);
+            a.click();
+            window.URL.revokeObjectURL(url);
+            document.body.removeChild(a);
+            
+            this.hideLoading();
+            this.showToast('Exported to Excel successfully!', 'success');
+            
+        } catch (error) {
+            this.hideLoading();
+            console.error('Error exporting to Excel:', error);
+            this.showToast('Error exporting to Excel', 'error');
+        }
+    }
+
+    async exportPartnerReportToPDF() {
+        try {
+            if (!this.currentPartnerReportData) {
+                this.showToast('Please generate a report first', 'error');
+                return;
+            }
+            
+            this.showLoading();
+            console.log('📄 Exporting to PDF...');
+            
+            const response = await fetch('/api/partner-report/export/pdf', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(this.currentPartnerReportData)
+            });
+            
+            if (!response.ok) {
+                throw new Error('Export failed');
+            }
+            
+            // Download file
+            const blob = await response.blob();
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `partner-report-${Date.now()}.pdf`;
+            document.body.appendChild(a);
+            a.click();
+            window.URL.revokeObjectURL(url);
+            document.body.removeChild(a);
+            
+            this.hideLoading();
+            this.showToast('Exported to PDF successfully!', 'success');
+            
+        } catch (error) {
+            this.hideLoading();
+            console.error('Error exporting to PDF:', error);
+            this.showToast('Error exporting to PDF', 'error');
         }
     }
 
@@ -1160,7 +1679,9 @@ class FieldWorkBookApp {
         requests.forEach(request => {
             const row = tbody.insertRow();
             const statusBadge = this.getStatusBadge(request.status);
-            const actions = (request.status === 'pending' || !request.status) && this.currentUser?.role === 'admin' ? 
+            // Allow both admin and partner to approve/reject
+            const canApprove = this.currentUser?.role === 'admin' || this.currentUser?.role === 'partner';
+            const actions = (request.status === 'pending' || !request.status) && canApprove ? 
                 `<button class="btn btn-sm btn-success me-1" onclick="app.approveRequest(${request.id})" title="Approve">
                     <i class="fas fa-check"></i>
                 </button>
@@ -1456,6 +1977,14 @@ class FieldWorkBookApp {
             });
         }
 
+        const partnersLink = document.getElementById('partnersLink');
+        if (partnersLink) {
+            partnersLink.addEventListener('click', (e) => {
+                e.preventDefault();
+                this.showSection('partners');
+            });
+        }
+
         document.getElementById('expensesLink').addEventListener('click', (e) => {
             e.preventDefault();
             this.showSection('expenses');
@@ -1466,6 +1995,14 @@ class FieldWorkBookApp {
             requestsLink.addEventListener('click', (e) => {
                 e.preventDefault();
                 this.showSection('requests');
+            });
+        }
+
+        const partnerReportLink = document.getElementById('partnerReportLink');
+        if (partnerReportLink) {
+            partnerReportLink.addEventListener('click', (e) => {
+                e.preventDefault();
+                this.showSection('partnerReport');
             });
         }
 
@@ -1544,6 +2081,36 @@ class FieldWorkBookApp {
             this.requestAmount(formData);
         });
 
+        // Create partner button and form
+        const createPartnerBtn = document.getElementById('createPartnerBtn');
+        if (createPartnerBtn) {
+            createPartnerBtn.addEventListener('click', () => {
+                new bootstrap.Modal(document.getElementById('createPartnerModal')).show();
+            });
+        }
+
+        const createPartnerForm = document.getElementById('createPartnerForm');
+        if (createPartnerForm) {
+            createPartnerForm.addEventListener('submit', (e) => {
+                e.preventDefault();
+                const formData = {
+                    full_name: document.getElementById('partnerFullName').value.trim(),
+                    username: document.getElementById('partnerUsername').value.trim(),
+                    password: document.getElementById('partnerPassword').value,
+                    email: document.getElementById('partnerEmail').value.trim(),
+                    team_id: document.getElementById('partnerTeamId').value || null
+                };
+                
+                // Validation
+                if (!formData.full_name || !formData.username || !formData.password) {
+                    this.showToast('Please fill in all required fields', 'error');
+                    return;
+                }
+                
+                this.createPartner(formData);
+            });
+        }
+
         // Modal triggers
         document.querySelectorAll('.create-team-btn').forEach(btn => {
             btn.addEventListener('click', () => {
@@ -1562,6 +2129,28 @@ class FieldWorkBookApp {
         document.getElementById('requestAmountBtn').addEventListener('click', () => {
             new bootstrap.Modal(document.getElementById('requestAmountModal')).show();
         });
+
+        // Partner Report buttons
+        const generateReportBtn = document.getElementById('generateReportBtn');
+        if (generateReportBtn) {
+            generateReportBtn.addEventListener('click', () => {
+                this.generatePartnerReport();
+            });
+        }
+
+        const exportExcelBtn = document.getElementById('exportExcelBtn');
+        if (exportExcelBtn) {
+            exportExcelBtn.addEventListener('click', () => {
+                this.exportPartnerReportToExcel();
+            });
+        }
+
+        const exportPdfBtn = document.getElementById('exportPdfBtn');
+        if (exportPdfBtn) {
+            exportPdfBtn.addEventListener('click', () => {
+                this.exportPartnerReportToPDF();
+            });
+        }
 
         // File input preview with animation
         document.getElementById('expenseAttachment').addEventListener('change', (e) => {
