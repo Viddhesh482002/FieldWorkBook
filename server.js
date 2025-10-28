@@ -1119,13 +1119,35 @@ app.post('/api/partner-report/export/excel', requireAuth, async (req, res) => {
             { width: 25 }   // Category
         ];
         
-        // Set response headers
-        res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
-        res.setHeader('Content-Disposition', `attachment; filename=partner-report-${Date.now()}.xlsx`);
+        // For WebView compatibility, save file temporarily and return URL
+        const path = require('path');
+        const fs = require('fs').promises;
         
-        // Write to response
-        await workbook.xlsx.write(res);
-        res.end();
+        // Create temp directory if it doesn't exist
+        const tempDir = path.join(__dirname, 'temp');
+        try {
+            await fs.mkdir(tempDir, { recursive: true });
+        } catch (err) {
+            // Directory already exists
+        }
+        
+        // Generate unique filename
+        const filename = `partner-report-${Date.now()}-${Math.random().toString(36).substr(2, 9)}.xlsx`;
+        const filepath = path.join(tempDir, filename);
+        
+        // Write file to temp directory
+        await workbook.xlsx.writeFile(filepath);
+        
+        // Return file URL for download
+        const fileUrl = `/api/download-temp/${filename}`;
+        
+        console.log('✅ Excel file saved:', filename);
+        
+        res.json({
+            success: true,
+            fileUrl: fileUrl,
+            filename: filename
+        });
         
     } catch (error) {
         console.error('Error exporting to Excel:', error);
@@ -1146,15 +1168,29 @@ app.post('/api/partner-report/export/pdf', requireAuth, async (req, res) => {
             filters
         });
         
+        // For WebView compatibility, save file temporarily and return URL
+        const path = require('path');
+        const fs = require('fs');
+        const fsPromises = require('fs').promises;
+        
+        // Create temp directory if it doesn't exist
+        const tempDir = path.join(__dirname, 'temp');
+        try {
+            await fsPromises.mkdir(tempDir, { recursive: true });
+        } catch (err) {
+            // Directory already exists
+        }
+        
+        // Generate unique filename
+        const filename = `partner-report-${Date.now()}-${Math.random().toString(36).substr(2, 9)}.pdf`;
+        const filepath = path.join(tempDir, filename);
+        
         // Create PDF document
         const doc = new PDFDocument({ margin: 50 });
         
-        // Set response headers
-        res.setHeader('Content-Type', 'application/pdf');
-        res.setHeader('Content-Disposition', `attachment; filename=partner-report-${Date.now()}.pdf`);
-        
-        // Pipe PDF to response
-        doc.pipe(res);
+        // Pipe PDF to file
+        const writeStream = fs.createWriteStream(filepath);
+        doc.pipe(writeStream);
         
         // Add title
         doc.fontSize(20).font('Helvetica-Bold').text('Partner Allocation Report', { align: 'center' });
@@ -1248,14 +1284,112 @@ app.post('/api/partner-report/export/pdf', requireAuth, async (req, res) => {
             { align: 'center' }
         );
         
-        // Finalize PDF
+        // Finalize PDF and wait for file to be written
         doc.end();
+        
+        // Wait for write stream to finish
+        await new Promise((resolve, reject) => {
+            writeStream.on('finish', resolve);
+            writeStream.on('error', reject);
+        });
+        
+        // Return file URL for download
+        const fileUrl = `/api/download-temp/${filename}`;
+        
+        console.log('✅ PDF file saved:', filename);
+        
+        res.json({
+            success: true,
+            fileUrl: fileUrl,
+            filename: filename
+        });
         
     } catch (error) {
         console.error('Error exporting to PDF:', error);
         res.status(500).json({ error: 'Failed to export to PDF' });
     }
 });
+
+// Serve temporary export files (WebView compatible)
+app.get('/api/download-temp/:filename', (req, res) => {
+    try {
+        const filename = req.params.filename;
+        const filepath = path.join(__dirname, 'temp', filename);
+        
+        // Security: Prevent directory traversal
+        if (filename.includes('..') || filename.includes('/') || filename.includes('\\')) {
+            return res.status(400).json({ error: 'Invalid filename' });
+        }
+        
+        // Check if file exists
+        if (!fs.existsSync(filepath)) {
+            return res.status(404).json({ error: 'File not found' });
+        }
+        
+        // Set appropriate headers based on file extension
+        const ext = path.extname(filename).toLowerCase();
+        if (ext === '.pdf') {
+            res.setHeader('Content-Type', 'application/pdf');
+        } else if (ext === '.xlsx') {
+            res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+        }
+        res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+        
+        // Send file
+        res.sendFile(filepath, (err) => {
+            if (err) {
+                console.error('Error sending file:', err);
+            } else {
+                // Delete file after successful download (after a delay to ensure download completes)
+                setTimeout(() => {
+                    fs.unlink(filepath, (unlinkErr) => {
+                        if (unlinkErr) {
+                            console.error('Error deleting temp file:', unlinkErr);
+                        } else {
+                            console.log('🗑️  Temp file deleted:', filename);
+                        }
+                    });
+                }, 5000); // 5 second delay
+            }
+        });
+        
+    } catch (error) {
+        console.error('Error serving temp file:', error);
+        res.status(500).json({ error: 'Failed to serve file' });
+    }
+});
+
+// Cleanup old temp files on server start
+const cleanupTempFiles = () => {
+    const tempDir = path.join(__dirname, 'temp');
+    if (fs.existsSync(tempDir)) {
+        fs.readdir(tempDir, (err, files) => {
+            if (err) return;
+            
+            files.forEach(file => {
+                const filepath = path.join(tempDir, file);
+                fs.stat(filepath, (statErr, stats) => {
+                    if (statErr) return;
+                    
+                    // Delete files older than 1 hour
+                    const now = new Date().getTime();
+                    const fileTime = new Date(stats.mtime).getTime();
+                    if (now - fileTime > 3600000) { // 1 hour
+                        fs.unlink(filepath, (unlinkErr) => {
+                            if (!unlinkErr) {
+                                console.log('🗑️  Cleaned up old temp file:', file);
+                            }
+                        });
+                    }
+                });
+            });
+        });
+    }
+};
+
+// Run cleanup on start and periodically
+cleanupTempFiles();
+setInterval(cleanupTempFiles, 3600000); // Every hour
 
 // Serve static files
 app.use('/uploads', express.static('uploads'));

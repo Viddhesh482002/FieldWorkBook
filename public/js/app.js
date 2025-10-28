@@ -1252,27 +1252,29 @@ class FieldWorkBookApp {
                 throw new Error('Export failed');
             }
             
-            // Download file - Mobile WebView compatible method
-            const blob = await response.blob();
+            // Get JSON response with file URL (WebView compatible)
+            const result = await response.json();
             
-            // Use different approach for mobile/WebView vs desktop
-            if (this.isMobileWebView()) {
-                // Convert blob to base64 for WebView compatibility
-                this.downloadFileViaBlobReader(blob, `partner-report-${Date.now()}.xlsx`);
-            } else {
-                // Use standard blob URL for desktop browsers
-                const url = window.URL.createObjectURL(blob);
+            if (result.success && result.fileUrl) {
+                // Use direct URL download - works in all environments including WebView
                 const a = document.createElement('a');
-                a.href = url;
-                a.download = `partner-report-${Date.now()}.xlsx`;
+                a.href = result.fileUrl;
+                a.download = result.filename || `partner-report-${Date.now()}.xlsx`;
+                a.style.display = 'none';
                 document.body.appendChild(a);
                 a.click();
-                window.URL.revokeObjectURL(url);
-                document.body.removeChild(a);
+                
+                // Cleanup
+                setTimeout(() => {
+                    document.body.removeChild(a);
+                }, 100);
+                
+                console.log('✅ Excel download initiated:', result.filename);
+                this.hideLoading();
+                this.showToast('Exported to Excel successfully!', 'success');
+            } else {
+                throw new Error('Invalid response from server');
             }
-            
-            this.hideLoading();
-            this.showToast('Exported to Excel successfully!', 'success');
             
         } catch (error) {
             this.hideLoading();
@@ -1303,27 +1305,29 @@ class FieldWorkBookApp {
                 throw new Error('Export failed');
             }
             
-            // Download file - Mobile WebView compatible method
-            const blob = await response.blob();
+            // Get JSON response with file URL (WebView compatible)
+            const result = await response.json();
             
-            // Use different approach for mobile/WebView vs desktop
-            if (this.isMobileWebView()) {
-                // Convert blob to base64 for WebView compatibility
-                this.downloadFileViaBlobReader(blob, `partner-report-${Date.now()}.pdf`);
-            } else {
-                // Use standard blob URL for desktop browsers
-                const url = window.URL.createObjectURL(blob);
+            if (result.success && result.fileUrl) {
+                // Use direct URL download - works in all environments including WebView
                 const a = document.createElement('a');
-                a.href = url;
-                a.download = `partner-report-${Date.now()}.pdf`;
+                a.href = result.fileUrl;
+                a.download = result.filename || `partner-report-${Date.now()}.pdf`;
+                a.style.display = 'none';
                 document.body.appendChild(a);
                 a.click();
-                window.URL.revokeObjectURL(url);
-                document.body.removeChild(a);
+                
+                // Cleanup
+                setTimeout(() => {
+                    document.body.removeChild(a);
+                }, 100);
+                
+                console.log('✅ PDF download initiated:', result.filename);
+                this.hideLoading();
+                this.showToast('Exported to PDF successfully!', 'success');
+            } else {
+                throw new Error('Invalid response from server');
             }
-            
-            this.hideLoading();
-            this.showToast('Exported to PDF successfully!', 'success');
             
         } catch (error) {
             this.hideLoading();
