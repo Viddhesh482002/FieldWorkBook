@@ -1159,6 +1159,72 @@ class FieldWorkBookApp {
         });
     }
 
+    // Helper method to detect mobile WebView environment
+    isMobileWebView() {
+        const userAgent = navigator.userAgent || navigator.vendor || window.opera;
+        
+        // Check for common WebView indicators
+        const isWebView = (
+            // Android WebView
+            /wv/.test(userAgent) ||
+            // iOS WebView (including WKWebView)
+            (/(iPhone|iPod|iPad).*AppleWebKit(?!.*Safari)/i.test(userAgent)) ||
+            // Check if running in mobile environment without full browser features
+            (window.navigator.standalone === true) ||
+            // Check for common WebView bridges
+            (typeof window.Android !== 'undefined') ||
+            (typeof window.webkit !== 'undefined' && typeof window.webkit.messageHandlers !== 'undefined')
+        );
+        
+        // Also check if blob URLs are supported (they usually aren't in WebView)
+        const supportsBlobURLs = typeof URL.createObjectURL === 'function';
+        
+        console.log('WebView Detection:', { 
+            isWebView, 
+            supportsBlobURLs, 
+            userAgent: userAgent.substring(0, 100)
+        });
+        
+        // If it looks like WebView OR blob URLs aren't supported, use alternative method
+        return isWebView || !supportsBlobURLs;
+    }
+
+    // Helper method to download file using FileReader (WebView compatible)
+    downloadFileViaBlobReader(blob, filename) {
+        const reader = new FileReader();
+        
+        reader.onloadend = () => {
+            // Convert blob to base64 data URL
+            const base64data = reader.result;
+            
+            // Create download link with data URL
+            const a = document.createElement('a');
+            a.href = base64data;
+            a.download = filename;
+            a.style.display = 'none';
+            
+            document.body.appendChild(a);
+            
+            // Trigger download
+            a.click();
+            
+            // Cleanup
+            setTimeout(() => {
+                document.body.removeChild(a);
+            }, 100);
+            
+            console.log('✅ File download triggered via FileReader (WebView compatible)');
+        };
+        
+        reader.onerror = (error) => {
+            console.error('FileReader error:', error);
+            this.showToast('Error preparing file for download', 'error');
+        };
+        
+        // Read blob as data URL (base64)
+        reader.readAsDataURL(blob);
+    }
+
     async exportPartnerReportToExcel() {
         try {
             if (!this.currentPartnerReportData) {
@@ -1186,16 +1252,24 @@ class FieldWorkBookApp {
                 throw new Error('Export failed');
             }
             
-            // Download file
+            // Download file - Mobile WebView compatible method
             const blob = await response.blob();
-            const url = window.URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = `partner-report-${Date.now()}.xlsx`;
-            document.body.appendChild(a);
-            a.click();
-            window.URL.revokeObjectURL(url);
-            document.body.removeChild(a);
+            
+            // Use different approach for mobile/WebView vs desktop
+            if (this.isMobileWebView()) {
+                // Convert blob to base64 for WebView compatibility
+                this.downloadFileViaBlobReader(blob, `partner-report-${Date.now()}.xlsx`);
+            } else {
+                // Use standard blob URL for desktop browsers
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `partner-report-${Date.now()}.xlsx`;
+                document.body.appendChild(a);
+                a.click();
+                window.URL.revokeObjectURL(url);
+                document.body.removeChild(a);
+            }
             
             this.hideLoading();
             this.showToast('Exported to Excel successfully!', 'success');
@@ -1229,16 +1303,24 @@ class FieldWorkBookApp {
                 throw new Error('Export failed');
             }
             
-            // Download file
+            // Download file - Mobile WebView compatible method
             const blob = await response.blob();
-            const url = window.URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = `partner-report-${Date.now()}.pdf`;
-            document.body.appendChild(a);
-            a.click();
-            window.URL.revokeObjectURL(url);
-            document.body.removeChild(a);
+            
+            // Use different approach for mobile/WebView vs desktop
+            if (this.isMobileWebView()) {
+                // Convert blob to base64 for WebView compatibility
+                this.downloadFileViaBlobReader(blob, `partner-report-${Date.now()}.pdf`);
+            } else {
+                // Use standard blob URL for desktop browsers
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `partner-report-${Date.now()}.pdf`;
+                document.body.appendChild(a);
+                a.click();
+                window.URL.revokeObjectURL(url);
+                document.body.removeChild(a);
+            }
             
             this.hideLoading();
             this.showToast('Exported to PDF successfully!', 'success');

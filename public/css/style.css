@@ -888,15 +888,15 @@ body::before {
 }
 
 .bg-success {
-    background: var(--success-gradient) !important;
-}
-
-.bg-warning {
     background: var(--warning-gradient) !important;
 }
 
+.bg-warning {
+    background: var(--neon-pink) !important;
+}
+
 .bg-info {
-    background: var(--info-gradient) !important;
+    background: var(--neon-cyan) !important;
 }
 
 .bg-danger {
@@ -921,7 +921,7 @@ body::before {
 }
 
 .text-danger {
-    color: var(--neon-pink) !important;
+    color: var(red) !important;
 }
 
 .text-muted {
@@ -1698,6 +1698,109 @@ table.dataTable tbody tr.dtr-details td .dtr-details {
     -webkit-text-fill-color: transparent;
     background-clip: text;
     font-weight: 700;
+}
+
+/* Mobile responsive fixes for DataTables */
+@media screen and (max-width: 768px) {
+    /* Reduce excessive spacing in DataTables */
+    table.dataTable tbody tr {
+        height: auto !important;
+    }
+    
+    table.dataTable tbody td {
+        padding: 8px 10px !important;
+        font-size: 0.9rem;
+        line-height: 1.4;
+    }
+    
+    table.dataTable thead th {
+        padding: 10px 10px !important;
+        font-size: 0.85rem;
+    }
+    
+    /* Fix DataTables responsive expanded rows - reduce spacing */
+    table.dataTable tbody tr.child {
+        padding: 0 !important;
+    }
+    
+    table.dataTable tbody tr.child td {
+        padding: 10px !important;
+    }
+    
+    table.dataTable tbody tr.child ul.dtr-details {
+        margin: 0 !important;
+        padding: 0 !important;
+    }
+    
+    table.dataTable tbody tr.child ul.dtr-details li {
+        word-wrap: break-word;
+        white-space: normal;
+        padding: 8px 0 !important;
+        margin: 0 !important;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        line-height: 1.4;
+    }
+    
+    table.dataTable tbody tr.child ul.dtr-details li:last-child {
+        border-bottom: none;
+    }
+    
+    table.dataTable tbody tr.child span.dtr-title {
+        display: inline-block;
+        min-width: 80px;
+        font-weight: 600;
+        margin-right: 10px;
+    }
+    
+    table.dataTable tbody tr.child span.dtr-data {
+        word-wrap: break-word;
+        word-break: break-word;
+        white-space: normal !important;
+        max-width: calc(100% - 90px);
+        display: inline-block;
+        vertical-align: top;
+    }
+    
+    /* Reduce DataTable wrapper spacing */
+    .dataTables_wrapper {
+        padding: 0 !important;
+    }
+    
+    .dataTables_wrapper .row {
+        margin: 5px 0 !important;
+    }
+    
+    /* Make pagination more compact */
+    .dataTables_wrapper .dataTables_paginate {
+        margin-top: 10px !important;
+    }
+    
+    .dataTables_wrapper .dataTables_paginate .paginate_button {
+        padding: 0.3rem 0.6rem !important;
+        margin: 0 2px !important;
+    }
+    
+    /* Reduce info text spacing */
+    .dataTables_wrapper .dataTables_info {
+        padding: 8px 0 !important;
+        font-size: 0.85rem;
+    }
+    
+    /* Ensure table cells wrap text properly on mobile */
+    .table-responsive table td {
+        word-wrap: break-word;
+        white-space: normal;
+    }
+    
+    /* Partner report table specific fixes */
+    #partnerReportTable tbody td {
+        padding: 10px 8px !important;
+    }
+    
+    /* Make card body more compact on mobile */
+    .card-body {
+        padding: 1rem 0.75rem !important;
+    }
 }
 
 /* Print Styles */
