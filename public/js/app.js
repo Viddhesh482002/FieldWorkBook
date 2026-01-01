@@ -1858,24 +1858,23 @@ class FieldWorkBookApp {
         const previewFileName = document.getElementById('previewFileName');
         const downloadBtn = document.getElementById('downloadPreviewBtn');
         
-        // Clean file path - ensure we only use the filename, not full path
-        const cleanFilePath = filePath.split('/').pop(); // Get just the filename
-        console.log('File preview requested:', { filePath, fileName, cleanFilePath });
+        // Use the filePath as-is (could be full path or just filename)
+        // Encode it properly for URL
+        const encodedFilePath = encodeURIComponent(filePath);
+        console.log('File preview requested:', { filePath, fileName, encodedFilePath });
         
-        // Get current server URL (works for both local and live)
-        const serverUrl = window.location.origin; // Gets http://localhost:3000 or https://yourdomain.com
-        console.log('Server URL:', serverUrl);
+        // Get current server URL
+        const serverUrl = window.location.origin;
         
         // Set file name
         previewFileName.textContent = fileName;
         
-        // Set download button - force actual download
+        // Set download button - use API endpoint
         downloadBtn.onclick = () => {
-            console.log('Download clicked for:', cleanFilePath);
-            // Create a temporary anchor element to trigger download
+            console.log('Download clicked for:', filePath);
             const link = document.createElement('a');
-            link.href = `${serverUrl}/uploads/${cleanFilePath}`;
-            link.download = fileName; // Set the filename for download
+            link.href = `${serverUrl}/api/download/${encodedFilePath}`;
+            link.download = fileName;
             link.target = '_blank';
             document.body.appendChild(link);
             link.click();
@@ -1889,9 +1888,9 @@ class FieldWorkBookApp {
         const fileExtension = fileName.toLowerCase().split('.').pop();
         
         if (['jpg', 'jpeg', 'png', 'gif', 'webp'].includes(fileExtension)) {
-            // Image preview - use direct static file serving
+            // Image preview - use API preview endpoint
             const img = document.createElement('img');
-            img.src = `${serverUrl}/uploads/${cleanFilePath}`;
+            img.src = `${serverUrl}/api/preview/${encodedFilePath}`;
             img.className = 'img-fluid';
             img.style.maxHeight = '70vh';
             img.style.objectFit = 'contain';
@@ -1900,7 +1899,7 @@ class FieldWorkBookApp {
             img.alt = fileName;
             
             img.onload = () => {
-                console.log('Image loaded successfully:', cleanFilePath);
+                console.log('Image loaded successfully:', filePath);
                 previewContent.innerHTML = '';
                 previewContent.style.display = 'flex';
                 previewContent.style.justifyContent = 'center';
@@ -1909,16 +1908,16 @@ class FieldWorkBookApp {
             };
             
             img.onerror = (e) => {
-                console.error('Image load error:', e, 'File:', cleanFilePath);
-                this.showFilePreviewError(`Failed to load image: ${cleanFilePath}<br><small class="text-muted">The file may be corrupted or inaccessible.</small>`);
+                console.error('Image load error:', e, 'File:', filePath);
+                this.showFilePreviewError(`Failed to load image: ${fileName}<br><small class="text-muted">The file may be corrupted or inaccessible.</small>`);
             };
             
             previewContent.innerHTML = '<div class="text-center"><div class="spinner-border text-primary" role="status"><span class="visually-hidden">Loading...</span></div><p class="mt-2">Loading image...</p></div>';
             
         } else if (fileExtension === 'pdf') {
-            // PDF preview - use direct static file serving
+            // PDF preview - use API preview endpoint
             const iframe = document.createElement('iframe');
-            iframe.src = `${serverUrl}/uploads/${cleanFilePath}#toolbar=1&navpanes=1&scrollbar=1`;
+            iframe.src = `${serverUrl}/api/preview/${encodedFilePath}#toolbar=1&navpanes=1&scrollbar=1`;
             iframe.style.width = '100%';
             iframe.style.height = '70vh';
             iframe.style.border = 'none';
@@ -1927,7 +1926,7 @@ class FieldWorkBookApp {
             iframe.title = fileName;
             
             iframe.onload = () => {
-                console.log('PDF loaded successfully:', cleanFilePath);
+                console.log('PDF loaded successfully:', filePath);
                 previewContent.innerHTML = '';
                 previewContent.style.display = 'flex';
                 previewContent.style.justifyContent = 'center';
@@ -1936,8 +1935,8 @@ class FieldWorkBookApp {
             };
             
             iframe.onerror = (e) => {
-                console.error('PDF load error:', e, 'File:', cleanFilePath);
-                this.showFilePreviewError(`Failed to load PDF: ${cleanFilePath}<br><small class="text-muted">The file may be corrupted or inaccessible.</small>`);
+                console.error('PDF load error:', e, 'File:', filePath);
+                this.showFilePreviewError(`Failed to load PDF: ${fileName}<br><small class="text-muted">The file may be corrupted or inaccessible.</small>`);
             };
             
             previewContent.innerHTML = '<div class="text-center"><div class="spinner-border text-primary" role="status"><span class="visually-hidden">Loading...</span></div><p class="mt-2">Loading PDF...</p></div>';

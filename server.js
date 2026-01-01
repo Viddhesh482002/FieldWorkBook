@@ -27,27 +27,14 @@ app.use(session({
     cookie: { secure: false, maxAge: 24 * 60 * 60 * 1000 } // 24 hours
 }));
 
-// Create uploads directory if it doesn't exist
-const uploadsDir = path.join(__dirname, 'uploads');
-if (!fs.existsSync(uploadsDir)) {
-    fs.mkdirSync(uploadsDir);
-}
+// Supabase Storage bucket name
+const STORAGE_BUCKET = 'Expense_Attachments';
 
-// Multer configuration for file uploads
-const storage = multer.diskStorage({
-    destination: function (req, file, cb) {
-        cb(null, 'uploads/');
-    },
-    filename: function (req, file, cb) {
-        const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
-        cb(null, file.fieldname + '-' + uniqueSuffix + path.extname(file.originalname));
-    }
-});
-
+// Multer configuration for file uploads (memory storage for Supabase)
 const upload = multer({ 
-    storage: storage,
+    storage: multer.memoryStorage(), // Store in memory to upload to Supabase
     fileFilter: function (req, file, cb) {
-        // Accept images only
+        // Accept images and PDFs
         if (!file.originalname.match(/\.(jpg|JPG|jpeg|JPEG|png|PNG|gif|GIF|pdf|PDF)$/)) {
             req.fileValidationError = 'Only image and PDF files are allowed!';
             return cb(new Error('Only image and PDF files are allowed!'), false);
@@ -419,8 +406,8 @@ app.post('/api/expenses', requireAuth, upload.single('attachment'), async (req, 
     const { description, amount, category } = req.body;
     const userId = req.session.userId;
     const teamId = req.session.teamId;
-    const attachmentPath = req.file ? req.file.filename : null;
-    const attachmentName = req.file ? req.file.originalname : null;
+    let attachmentPath = null;
+    let attachmentName = null;
 
     if (req.session.userRole !== 'field_staff') {
         return res.status(403).json({ error: 'Only field staff can add expenses' });
@@ -443,6 +430,36 @@ app.post('/api/expenses', requireAuth, upload.single('attachment'), async (req, 
         if (!team || parseFloat(team.remaining_amount) < parseFloat(amount)) {
             return res.status(400).json({ error: 'Insufficient team balance' });
         }
+
+    // Upload file to Supabase Storage if provided
+    if (req.file) {
+        try {
+            attachmentName = req.file.originalname;
+            const fileExt = path.extname(attachmentName);
+            const uniqueFileName = `expense-${Date.now()}-${Math.round(Math.random() * 1E9)}${fileExt}`;
+            const filePath = `${userId}/${uniqueFileName}`; // Organize by user ID
+
+            // Upload to Supabase Storage
+            const { data: uploadData, error: uploadError } = await supabase.storage
+                .from(STORAGE_BUCKET)
+                .upload(filePath, req.file.buffer, {
+                    contentType: req.file.mimetype,
+                    upsert: false
+                });
+
+            if (uploadError) {
+                console.error('Supabase Storage upload error:', uploadError);
+                return res.status(500).json({ error: 'Failed to upload attachment: ' + uploadError.message });
+            }
+
+            // Store the file path (not the full URL, just the path)
+            attachmentPath = filePath;
+            console.log('✅ File uploaded to Supabase Storage:', filePath);
+        } catch (uploadErr) {
+            console.error('File upload error:', uploadErr);
+            return res.status(500).json({ error: 'Failed to upload attachment' });
+        }
+    }
 
         // Add expense
     const { data: newExpense, error: insertErr } = await supabase
@@ -692,31 +709,172 @@ app.get('/api/dashboard/stats', requireAdminOrPartner, async (req, res) => {
                 res.json(stats);
 });
 
-// File download route
-app.get('/api/download/:filename', requireAuth, async (req, res) => {
+// File download route - handles both old local files and new Supabase Storage files
+app.get('/api/download/:filename(*)', requireAuth, async (req, res) => {
     const filename = req.params.filename;
-    const filePath = path.join(__dirname, 'uploads', filename);
+    
     // Security check: verify file exists and user has access
-    const { data: expense, error } = await supabase
+    // The filename might be:
+    // 1. Just the basename (old format: "attachment-123.jpg")
+    // 2. Full path (new format: "userId/expense-123.jpg")
+    // 3. URL-encoded path
+    
+    const { data: expenses, error } = await supabase
         .from('expenses')
         .select('*')
-        .eq('attachment_path', filename)
-        .single();
+        .not('attachment_path', 'is', null);
+    
     if (error) {
         console.error('Database error:', error);
-            return res.status(500).json({ error: 'Database error' });
+        return res.status(500).json({ error: 'Database error' });
+    }
+    
+    // Find expense where attachment_path matches
+    const expense = expenses?.find(e => {
+        if (!e.attachment_path) return false;
+        // Handle both old format (just filename) and new format (path)
+        const pathParts = e.attachment_path.split('/');
+        const storedFilename = pathParts[pathParts.length - 1];
+        // Match if filename matches or full path matches
+        return storedFilename === filename || 
+               e.attachment_path === filename || 
+               e.attachment_path.endsWith(filename) ||
+               decodeURIComponent(e.attachment_path) === decodeURIComponent(filename);
+    });
+    
+    if (!expense) {
+        return res.status(404).json({ error: 'File not found' });
+    }
+    
+    if (req.session.userRole === 'field_staff' && expense.team_id !== req.session.teamId) {
+        return res.status(403).json({ error: 'Access denied' });
+    }
+    
+    try {
+        const filePath = expense.attachment_path;
+        
+        // Check if this is an old local file (just filename, no path separator)
+        if (!filePath.includes('/') && fs.existsSync(path.join(__dirname, 'uploads', filePath))) {
+            // Old format - serve from local filesystem
+            const localFilePath = path.join(__dirname, 'uploads', filePath);
+            res.download(localFilePath, expense.attachment_name || filename);
+            console.log('✅ File downloaded from local storage:', filePath);
+            return;
         }
-        if (!expense) {
+        
+        // New format - download from Supabase Storage
+        const { data: fileData, error: downloadError } = await supabase.storage
+            .from(STORAGE_BUCKET)
+            .download(filePath);
+        
+        if (downloadError) {
+            console.error('Supabase Storage download error:', downloadError);
+            return res.status(404).json({ error: 'File not found in storage: ' + downloadError.message });
+        }
+        
+        // Convert blob to buffer
+        const arrayBuffer = await fileData.arrayBuffer();
+        const buffer = Buffer.from(arrayBuffer);
+        
+        // Determine content type
+        const ext = path.extname(expense.attachment_name || filePath).toLowerCase();
+        const contentTypeMap = {
+            '.jpg': 'image/jpeg',
+            '.jpeg': 'image/jpeg',
+            '.png': 'image/png',
+            '.gif': 'image/gif',
+            '.pdf': 'application/pdf'
+        };
+        const contentType = contentTypeMap[ext] || 'application/octet-stream';
+        
+        // Set headers and send file
+        res.setHeader('Content-Type', contentType);
+        res.setHeader('Content-Disposition', `attachment; filename="${expense.attachment_name || filename}"`);
+        res.send(buffer);
+        
+        console.log('✅ File downloaded from Supabase Storage:', filePath);
+    } catch (downloadErr) {
+        console.error('File download error:', downloadErr);
+        res.status(500).json({ error: 'Failed to download file' });
+    }
+});
+
+// File preview route - returns file data for preview (images/PDFs)
+app.get('/api/preview/:filename(*)', requireAuth, async (req, res) => {
+    const filename = req.params.filename;
+    
+    const { data: expenses, error } = await supabase
+        .from('expenses')
+        .select('*')
+        .not('attachment_path', 'is', null);
+    
+    if (error) {
+        return res.status(500).json({ error: 'Database error' });
+    }
+    
+    const expense = expenses?.find(e => {
+        if (!e.attachment_path) return false;
+        const pathParts = e.attachment_path.split('/');
+        const storedFilename = pathParts[pathParts.length - 1];
+        return storedFilename === filename || 
+               e.attachment_path === filename || 
+               e.attachment_path.endsWith(filename);
+    });
+    
+    if (!expense) {
+        return res.status(404).json({ error: 'File not found' });
+    }
+    
+    if (req.session.userRole === 'field_staff' && expense.team_id !== req.session.teamId) {
+        return res.status(403).json({ error: 'Access denied' });
+    }
+    
+    try {
+        const filePath = expense.attachment_path;
+        
+        // Check if old local file
+        if (!filePath.includes('/') && fs.existsSync(path.join(__dirname, 'uploads', filePath))) {
+            const localFilePath = path.join(__dirname, 'uploads', filePath);
+            const ext = path.extname(filePath).toLowerCase();
+            const contentTypeMap = {
+                '.jpg': 'image/jpeg',
+                '.jpeg': 'image/jpeg',
+                '.png': 'image/png',
+                '.gif': 'image/gif',
+                '.pdf': 'application/pdf'
+            };
+            res.setHeader('Content-Type', contentTypeMap[ext] || 'application/octet-stream');
+            res.sendFile(localFilePath);
+            return;
+        }
+        
+        // Download from Supabase Storage
+        const { data: fileData, error: downloadError } = await supabase.storage
+            .from(STORAGE_BUCKET)
+            .download(filePath);
+        
+        if (downloadError) {
             return res.status(404).json({ error: 'File not found' });
         }
-        if (req.session.userRole === 'field_staff' && expense.team_id !== req.session.teamId) {
-            return res.status(403).json({ error: 'Access denied' });
-        }
-        if (fs.existsSync(filePath)) {
-            res.download(filePath, expense.attachment_name || filename);
-        } else {
-            res.status(404).json({ error: 'File not found on server' });
-        }
+        
+        const arrayBuffer = await fileData.arrayBuffer();
+        const buffer = Buffer.from(arrayBuffer);
+        
+        const ext = path.extname(expense.attachment_name || filePath).toLowerCase();
+        const contentTypeMap = {
+            '.jpg': 'image/jpeg',
+            '.jpeg': 'image/jpeg',
+            '.png': 'image/png',
+            '.gif': 'image/gif',
+            '.pdf': 'application/pdf'
+        };
+        
+        res.setHeader('Content-Type', contentTypeMap[ext] || 'application/octet-stream');
+        res.send(buffer);
+    } catch (err) {
+        console.error('Preview error:', err);
+        res.status(500).json({ error: 'Failed to load file' });
+    }
 });
 
 // Partner Report routes
@@ -934,13 +1092,41 @@ app.get('/api/partner-report', requireAuth, async (req, res) => {
         
         console.log('Requests fetched:', requests?.length || 0, requests);
         
+        // 3. Calculate original initial amounts for teams
+        // The current initial_amount includes approved requests, so we need to subtract them
+        const teamIds = (teams || []).map(t => t.id);
+        let originalInitialAmounts = {};
+        
+        if (teamIds.length > 0) {
+            // Get all approved requests for these teams (regardless of who approved them)
+            const { data: allTeamRequests, error: teamReqsError } = await supabase
+                .from('amount_requests')
+                .select('team_id, requested_amount')
+                .in('team_id', teamIds)
+                .eq('status', 'approved');
+            
+            if (!teamReqsError && allTeamRequests) {
+                // Sum up all approved requests per team
+                allTeamRequests.forEach(req => {
+                    if (!originalInitialAmounts[req.team_id]) {
+                        originalInitialAmounts[req.team_id] = 0;
+                    }
+                    originalInitialAmounts[req.team_id] += parseFloat(req.requested_amount || 0);
+                });
+            }
+        }
+        
         // Transform data into report format
         const reportData = [];
         
-        // Process teams - Initial amounts assigned to teams
+        // Process teams - Initial amounts assigned to teams (ORIGINAL amount, not updated)
         (teams || []).forEach(team => {
-            const partner1Amount = team.created_by == partner1_id ? parseFloat(team.initial_amount) : 0;
-            const partner2Amount = team.created_by == partner2_id ? parseFloat(team.initial_amount) : 0;
+            // Calculate original initial amount by subtracting all approved requests
+            const approvedRequestsTotal = originalInitialAmounts[team.id] || 0;
+            const originalInitialAmount = parseFloat(team.initial_amount || 0) - approvedRequestsTotal;
+            
+            const partner1Amount = team.created_by == partner1_id ? originalInitialAmount : 0;
+            const partner2Amount = team.created_by == partner2_id ? originalInitialAmount : 0;
             
             reportData.push({
                 date: team.created_at,
@@ -1414,5 +1600,5 @@ app.use((error, req, res, next) => {
 app.listen(PORT, () => {
     console.log(`🚀 FieldWorkBook server running on http://localhost:${PORT}`);
     console.log(`🔗 Supabase: ${SUPABASE_URL ? 'configured' : 'NOT CONFIGURED'}`);
-    console.log(`📂 Uploads: ${uploadsDir}`);
+    console.log(`📦 Storage: ${SUPABASE_URL ? `Supabase Storage (${STORAGE_BUCKET})` : 'NOT CONFIGURED'}`);
 });
