@@ -711,13 +711,24 @@ app.get('/api/dashboard/stats', requireAdminOrPartner, async (req, res) => {
 
 // File download route - handles both old local files and new Supabase Storage files
 app.get('/api/download/:filename(*)', requireAuth, async (req, res) => {
-    const filename = req.params.filename;
+    // Express automatically decodes URL parameters, but handle both encoded and decoded cases
+    let filename = req.params.filename;
+    
+    // Try to decode if it's still encoded (double-encoded case)
+    try {
+        const decoded = decodeURIComponent(filename);
+        if (decoded !== filename) {
+            filename = decoded;
+        }
+    } catch (e) {
+        // Already decoded or invalid encoding, use as-is
+    }
     
     // Security check: verify file exists and user has access
     // The filename might be:
     // 1. Just the basename (old format: "attachment-123.jpg")
     // 2. Full path (new format: "userId/expense-123.jpg")
-    // 3. URL-encoded path
+    // 3. URL-encoded path (will be decoded by Express)
     
     const { data: expenses, error } = await supabase
         .from('expenses')
@@ -729,26 +740,54 @@ app.get('/api/download/:filename(*)', requireAuth, async (req, res) => {
         return res.status(500).json({ error: 'Database error' });
     }
     
-    // Find expense where attachment_path matches
+    // Find expense where attachment_path matches - use strict matching for security
     const expense = expenses?.find(e => {
         if (!e.attachment_path) return false;
-        // Handle both old format (just filename) and new format (path)
-        const pathParts = e.attachment_path.split('/');
-        const storedFilename = pathParts[pathParts.length - 1];
-        // Match if filename matches or full path matches
-        return storedFilename === filename || 
-               e.attachment_path === filename || 
-               e.attachment_path.endsWith(filename) ||
-               decodeURIComponent(e.attachment_path) === decodeURIComponent(filename);
+        
+        const storedPath = e.attachment_path;
+        const storedPathParts = storedPath.split('/');
+        const storedBasename = storedPathParts[storedPathParts.length - 1];
+        
+        // Strict matching: prefer exact matches, only use basename for old format (no path separator)
+        // 1. Exact path match (most secure)
+        if (storedPath === filename) return true;
+        
+        // 2. Handle URL encoding variations (exact match only)
+        try {
+            const decodedStored = decodeURIComponent(storedPath);
+            const decodedFilename = decodeURIComponent(filename);
+            if (decodedStored === decodedFilename) return true;
+        } catch (e) {
+            // Ignore decode errors
+        }
+        
+        // 3. Basename match ONLY for old format files (no path separator in stored path)
+        // This prevents basename-only access to new format files (which have paths)
+        if (!storedPath.includes('/') && storedBasename === filename) return true;
+        
+        return false;
     });
     
     if (!expense) {
         return res.status(404).json({ error: 'File not found' });
     }
     
-    if (req.session.userRole === 'field_staff' && expense.team_id !== req.session.teamId) {
-        return res.status(403).json({ error: 'Access denied' });
+    // Enforce access control for all user types
+    const userRole = req.session.userRole;
+    const userTeamId = req.session.teamId;
+    
+    // Field staff can only access files from their own team
+    if (userRole === 'field_staff') {
+        if (expense.team_id !== userTeamId) {
+            console.warn(`Access denied: Field staff ${req.session.userId} attempted to access file from team ${expense.team_id}`);
+            return res.status(403).json({ error: 'Access denied: You can only access files from your own team' });
+        }
     }
+    // Admin and Partner can access all files (no additional check needed, but expense must exist)
+    // The fact that we found an expense in the database is sufficient validation
+    
+    // Log access for security auditing
+    console.log(`File access: ${userRole} ${req.session.userId} accessing expense ${expense.id} (team ${expense.team_id})`);
     
     try {
         const filePath = expense.attachment_path;
@@ -801,7 +840,18 @@ app.get('/api/download/:filename(*)', requireAuth, async (req, res) => {
 
 // File preview route - returns file data for preview (images/PDFs)
 app.get('/api/preview/:filename(*)', requireAuth, async (req, res) => {
-    const filename = req.params.filename;
+    // Express automatically decodes URL parameters, but handle both encoded and decoded cases
+    let filename = req.params.filename;
+    
+    // Try to decode if it's still encoded (double-encoded case)
+    try {
+        const decoded = decodeURIComponent(filename);
+        if (decoded !== filename) {
+            filename = decoded;
+        }
+    } catch (e) {
+        // Already decoded or invalid encoding, use as-is
+    }
     
     const { data: expenses, error } = await supabase
         .from('expenses')
@@ -812,22 +862,54 @@ app.get('/api/preview/:filename(*)', requireAuth, async (req, res) => {
         return res.status(500).json({ error: 'Database error' });
     }
     
+    // Find expense where attachment_path matches - use strict matching for security
     const expense = expenses?.find(e => {
         if (!e.attachment_path) return false;
-        const pathParts = e.attachment_path.split('/');
-        const storedFilename = pathParts[pathParts.length - 1];
-        return storedFilename === filename || 
-               e.attachment_path === filename || 
-               e.attachment_path.endsWith(filename);
+        
+        const storedPath = e.attachment_path;
+        const storedPathParts = storedPath.split('/');
+        const storedBasename = storedPathParts[storedPathParts.length - 1];
+        
+        // Strict matching: prefer exact matches, only use basename for old format (no path separator)
+        // 1. Exact path match (most secure)
+        if (storedPath === filename) return true;
+        
+        // 2. Handle URL encoding variations (exact match only)
+        try {
+            const decodedStored = decodeURIComponent(storedPath);
+            const decodedFilename = decodeURIComponent(filename);
+            if (decodedStored === decodedFilename) return true;
+        } catch (e) {
+            // Ignore decode errors
+        }
+        
+        // 3. Basename match ONLY for old format files (no path separator in stored path)
+        // This prevents basename-only access to new format files (which have paths)
+        if (!storedPath.includes('/') && storedBasename === filename) return true;
+        
+        return false;
     });
     
     if (!expense) {
         return res.status(404).json({ error: 'File not found' });
     }
     
-    if (req.session.userRole === 'field_staff' && expense.team_id !== req.session.teamId) {
-        return res.status(403).json({ error: 'Access denied' });
+    // Enforce access control for all user types
+    const userRole = req.session.userRole;
+    const userTeamId = req.session.teamId;
+    
+    // Field staff can only access files from their own team
+    if (userRole === 'field_staff') {
+        if (expense.team_id !== userTeamId) {
+            console.warn(`Access denied: Field staff ${req.session.userId} attempted to access file from team ${expense.team_id}`);
+            return res.status(403).json({ error: 'Access denied: You can only access files from your own team' });
+        }
     }
+    // Admin and Partner can access all files (no additional check needed, but expense must exist)
+    // The fact that we found an expense in the database is sufficient validation
+    
+    // Log access for security auditing
+    console.log(`File preview: ${userRole} ${req.session.userId} accessing expense ${expense.id} (team ${expense.team_id})`);
     
     try {
         const filePath = expense.attachment_path;
@@ -1111,7 +1193,13 @@ app.get('/api/partner-report', requireAuth, async (req, res) => {
                     if (!originalInitialAmounts[req.team_id]) {
                         originalInitialAmounts[req.team_id] = 0;
                     }
-                    originalInitialAmounts[req.team_id] += parseFloat(req.requested_amount || 0);
+                    // Validate requested_amount is a valid number before adding
+                    const amount = parseFloat(req.requested_amount);
+                    if (!isNaN(amount) && isFinite(amount) && amount >= 0) {
+                        originalInitialAmounts[req.team_id] += amount;
+                    } else {
+                        console.warn(`Invalid requested_amount for request ${req.team_id}: ${req.requested_amount}`);
+                    }
                 });
             }
         }
@@ -1142,8 +1230,12 @@ app.get('/api/partner-report', requireAuth, async (req, res) => {
         
         // Process approved amount requests
         (requests || []).forEach(request => {
-            const partner1Amount = request.processed_by == partner1_id ? parseFloat(request.requested_amount) : 0;
-            const partner2Amount = request.processed_by == partner2_id ? parseFloat(request.requested_amount) : 0;
+            // Safely parse requested_amount with fallback for null/undefined/invalid values
+            const requestedAmount = parseFloat(request.requested_amount || 0);
+            const safeAmount = (!isNaN(requestedAmount) && isFinite(requestedAmount) && requestedAmount >= 0) ? requestedAmount : 0;
+            
+            const partner1Amount = request.processed_by == partner1_id ? safeAmount : 0;
+            const partner2Amount = request.processed_by == partner2_id ? safeAmount : 0;
             
             reportData.push({
                 date: request.processed_at || request.created_at,
